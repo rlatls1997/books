@@ -1,1 +1,1 @@
-# effective_java
+# 책 스터디 정리
