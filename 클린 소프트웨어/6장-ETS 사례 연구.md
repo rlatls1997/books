@@ -671,3 +671,253 @@ public class XMLPiecePartExtension implements XMLPartExtension {
 
 하지만 비지터를 사용하는 것보다 더 간단하게 해결할 수 있는 경우도 많기 때문에 적절한때에 사용해야한다.
 
+# Chapter 29. 스테이트 패턴
+## 유한 상태 오토마타의 개괄
+유한 상태 기계(FSM: finite state machine)의 한 예로 지하철 개찰구를 생각해보자.
+
+<img src="https://github.com/user-attachments/assets/e129c882-7fd0-4410-92b1-c8d7109938ee" width="600">
+
+위와 같은 다이어그램을 `상태 전이 다이어그램(STD: state transition diagram)`이라고 한다.
+
+상태 전이 다이어그램은 최소 다음으로 구성된다.
+- 상태 : 위 다이어그램에서 둥근 상자. Locked, Unlocked
+- 전이 : 상태를 연결하는 화살표
+- 이벤트 : 전이를 유발하는 이벤트. coin, pass
+- 행동 : 이벤트에 따른 행동. lock, unlock
+
+위 다이어그램을 상태 전이 테이블(STT: state transition table)이라는 표로도 나타낼 수 있따.
+
+| 현재상태 | 이벤트 | 다음상태 | 행동 |
+|----------|--------|----------|------|
+| Locked   | coin   | Unlocked | unlock |
+| Unlocked | pass   | Locked   | lock   |
+
+
+상태 전이 다이어그램(STD)와 상태 전이 테이블(STT)는 기계의 행위를 간결하고 명쾌하게 설명한다.  
+동시에 강력한 설계 도구이기도 하다.
+
+설계자는 STD, STT를 보고 이상한 조건이나 정의되지 않은 조건을 찾기 쉬워진다.
+
+위 다이어그램에서는 생략된 전이를 쉽게 알아챌 수 있다.
+- Unlocked상태에서 coin이벤트를 다루는 전이가 없다
+- Locked상태에서 pass이벤트를 다루는 전이가 없다
+
+생략된 전이는 논리적 결함이 된다.  
+STD, STT를 통해 설계가 모든 상태에서 모든 이벤트를 전부 다루는지 쉽게 점검할 수 있다.
+
+다이어그램에서 생략된 전이를 보정하면 다음과 같다.
+
+<img src="https://github.com/user-attachments/assets/204ac5c1-f216-46ca-9e7b-54d9e0b2c504" width="600">
+
+## 구현 기법
+## 1. 중첩된 switch/case문
+유한 상태 기계(FSM)를 switch/case문으로 구현할 수 있다.
+
+- TurnstileController.java
+```java
+public interface TurnstileController {
+    void lock();
+    void unlock();
+    void thankYou();
+    void alarm();
+}
+```
+- Turnstile.java
+```java
+public class Turnstile {
+	// 상태
+	public static final int LOCKED = 0;
+	public static final int UNLOCKED = 1;
+
+	// 이벤트
+	public static final int COIN = 0;
+	public static final int PASS = 1;
+
+	// 전용
+	int state = LOCKED;
+
+	private TurnstileController turnstileController;
+
+	public Turnstile(TurnstileController tc) {
+		turnstileController = tc;
+	}
+
+	public void event(int event) {
+		switch (state) {
+			case LOCKED:
+				switch (event) {
+					case COIN:
+						state = UNLOCKED;
+						turnstileController.unlock();
+						break;
+					case PASS:
+						turnstileController.alarm();
+						break;
+				}
+				break;
+			case UNLOCKED:
+				switch (event) {
+					case COIN:
+						turnstileController.thankyou();
+						break;
+					case PASS:
+						state = LOCKED;
+						turnstileController.lock();
+						break;
+				}
+		}
+	}
+}
+```
+
+### 범위가 패키지인 상태 변수
+위 코드에서 state는 private이 아니다.
+
+작가는 테스트하기 위해 state를 범위가 패키지인 변수로 만드는 대신 주석으로 `//전용`이라고 표시했다.
+
+여기에 그냥 getter, setter 만들면 되지 않냐? 라고 반박할 수 있는데  
+=> Test클래스 외에서 노출하려는 변수가 아닌데 의도에 어긋난다. 또한 이는 public과 다를게 없다.
+
+### 행동을 테스트하기
+Turnstile을 테스트하기 위해 TurnstileController를 인터페이스로 만들었다.
+
+TurnstileController인터페이스가 유한상태기계의 논리와 행동 사이의 결합을 끊어놓았다.
+
+각 단위를 독립적으로 테스트할 수 있게 되었다.
+
+### 중첩된 switch/case 구현의 비용과 장점
+장점
+- 명쾌하고 효율적
+
+단점
+- 상태와 이벤트가 많아지면 코드를 알아보기 어렵다.
+
+## 2. 전이 테이블 해석
+전이를 설명하는 데이터 테이블을 만들어서 FSM을 구현할 수도 있따.
+
+- 개찰구 전이 테이블 구축하기
+```java
+public Turnstile(TurnstileController tc) { {
+    this.tc = tc;
+    addTransition(LOCKED, COIN, UNLOCKED, unlock());
+    addTransition(LOCKED, PASS, LOCKED, alarm());
+    addTransition(UNLOCKED, COIN, UNLOCKED, thankyou());
+    addTransition(UNLOCKED, PASS, LOCKED, lock());
+}
+```
+
+- 전이 엔진(전이테이블을 순회하면서 상태별 이벤트에 해당하는 전이정보를 가져온 뒤 알맞는 행동을 실행한다)
+```java
+public void event(int event) {
+    for(int i = 0; i < transitions.size(); i++) {
+        Transition t = (Transition)transitions.get(i);
+		
+        if(state == t.currentState && event == t.event) {
+            state = t.newState;
+			t.action.execute();
+        }
+    }
+}
+```
+
+### 전이 테이블을 해석하는 접근 방법의 비용과 장점
+장점
+- 코드를 상태 전이 테이블처럼 읽을 수 있다는 점.(상태 전이를 한 눈에 보기 쉽다)
+- 새로운 전이를 추가하는것이 간단하다.
+
+단점
+- 전이 테이블을 검색해야하므로 느리다.
+- 전이테이블을 지원하기 위한 코드의 양이 많다.
+
+
+## 3. 스테이트 패턴
+스테이트 패턴도 유한 상태 기계(FSM)을 구현하는 방법 중 하나이다.
+
+상태에 대한 인터페이스를 만들고 각 상태에 대한 파생형을 만든다.
+
+<img src="https://github.com/user-attachments/assets/ef9e414c-ec30-4502-a6a9-cad11ad854a7" width="600">
+
+TurnstileLockedState 클래스는 Locked 상태일 때의 이벤트를,  
+TurnstileUnlockedState 클래스는 Unlocked 상태일 때의 이벤트를 처리한다.
+
+- TurnstileState.java
+```java
+public interface TurnstileState {
+    void coin(Turnstile t);
+    void pass(Turnstile t);
+}
+
+class LockedTurnstileState implements TurnstileState {
+    @Override
+    public void coin(Turnstile t) {
+        t.setUnlocked();
+        t.unlock();
+    }
+
+    @Override
+    public void pass(Turnstile t) {
+        t.alarm();
+    }
+}
+...
+```
+
+
+- TurnStile.java
+```java
+public class Turnstile {
+    private static TurnstileState lockedState = new LockedTurnstileState(this);
+    private static TurnstileState unlockedState = new UnlockedTurnstileState(this);
+
+    private TurnstileController tc;    
+    private TurnstileState state = lockedState;
+	
+    public void coin() {
+        state.coin(this);
+    }
+
+    public void pass() {
+        state.pass(this);
+    }
+    ...
+```
+
+### 스테이트와 스트래터지
+스테이트 패턴은 스트래터지 패턴과 비슷하다.  
+두 패턴 모두 컨텍스트 클래스가 있고, 두 패턴 모두 파생형이 여러개 있는 다형적인 기반 클래스에 위임한다.
+
+차이점은,  
+스테이트에서는 파생형이 컨텍스트 클래스에 대한 참조를 갖고있다는 점이다.
+
+<img src="https://github.com/user-attachments/assets/cc9f8d1b-5e5b-4ed8-8e58-7a7d5c733f03" width="600">
+
+스테이트 패턴은 스트래터지패턴이라고 볼 수 있다.(스트래터지 패턴이 더 큰 집합)
+
+### 스테이트 패턴의 비용과 장점
+장점
+- 행동은 context클래스, 논리는 state클래스의 파생형들에 분산되어 변경이 쉬워진다.
+- 효율적이다.
+
+단점
+- state의 파생형을 작성하는 작업은 귀찮다.(상태가 수십개 있으면..)
+- 상태기계의 논리를 한 눈에 볼 수 있는 장소가 없다. => 유지보수가 힘들다
+
+## 상태 기계 컴파일러(SMC)
+텍스트로 작성된 상태전이테이블을 스태이트 패턴을 구현하는데에 필요한 클래스들로 변환하주는 컴파일러.
+(http://www.cleancoders.com 에서 다운 가능하다)
+
+### 스테이트 패턴에 SMC접근 방법을 사용할 때의 비용과 장점
+장점
+- 별도 파일에 SMC를 위한 유한상태기계에 대한 설명이 한 장소에 모여있어서 알아보기 쉽고 유지보수하기 쉽다.
+- 유한상태기계의 논리와 행동의 구현이 철저히 분리되어있다
+- 코드를 만들어주므로 코딩량이 적어진다.
+
+단점
+- SMC를 사용해야하는것 자체가 비용이다. 새로운 도구의 학습, 설치
+
+## 결론
+유한상태기계는 많이 활용되지 않으나 ,  
+유한상태기계의 사용이 분명하고 명확하고 유연한 시나리오가 있다.
+
+이런 시나리오에서 스테이트 패턴과상태기계 컴파일러(SMC)를 활용하면 도움이 된다.
+
