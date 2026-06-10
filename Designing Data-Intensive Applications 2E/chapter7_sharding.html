@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7장 · 샤딩 (Sharding)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#f6f8fc;
+  --ink2:#eef2f8;
+  --panel:#ffffff;
+  --paper:#14233b;
+  --muted:#5e7088;
+  --leader:#c97f0a;
+  --flow:#0d9488;
+  --blue:#2f6fd0;
+  --conflict:#d6453c;
+  --violet:#7c5cf0;
+  --line:rgba(20,35,59,0.10);
+  --line2:rgba(20,35,59,0.18);
+  --disp:'Space Grotesk','Noto Sans KR',sans-serif;
+  --body:'Inter','Noto Sans KR',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--body);background:var(--ink);color:var(--paper);-webkit-font-smoothing:antialiased}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:54px 54px;mask-image:radial-gradient(ellipse 90% 80% at 50% 45%,#000 35%,transparent 90%);opacity:.5}
+.bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(700px 500px at 82% 12%,rgba(124,92,240,.05),transparent 60%),radial-gradient(800px 600px at 15% 88%,rgba(47,111,208,.05),transparent 60%)}
+
+.deck{position:relative;z-index:2;height:100%;width:100%}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:clamp(28px,5.5vw,90px);opacity:0}
+.slide.active{display:flex;animation:slideIn .55s cubic-bezier(.22,.61,.36,1) both}
+@keyframes slideIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--violet);display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--violet)}
+.slide h1{font-family:var(--disp);font-weight:700;line-height:1.04;letter-spacing:-.02em}
+.slide h2{font-family:var(--disp);font-weight:600;font-size:clamp(1.6rem,3.4vw,2.9rem);line-height:1.08;letter-spacing:-.01em;margin-bottom:10px}
+.lead{color:var(--muted);font-size:clamp(1rem,1.5vw,1.2rem);max-width:62ch;line-height:1.6;font-weight:300}
+.lead b{color:var(--paper)}
+
+.r{opacity:0;transform:translateY(16px)}
+.slide.active .r{animation:rise .6s cubic-bezier(.22,.61,.36,1) forwards}
+.slide.active .r:nth-child(1){animation-delay:.05s}
+.slide.active .r:nth-child(2){animation-delay:.14s}
+.slide.active .r:nth-child(3){animation-delay:.23s}
+.slide.active .r:nth-child(4){animation-delay:.32s}
+.slide.active .r:nth-child(5){animation-delay:.41s}
+.slide.active .r:nth-child(6){animation-delay:.5s}
+.slide.active .r:nth-child(7){animation-delay:.59s}
+@keyframes rise{to{opacity:1;transform:none}}
+
+.cols{display:grid;gap:clamp(16px,2.4vw,34px)}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}
+.split{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(20px,3vw,50px);align-items:center}
+.maxw{max-width:1180px;width:100%;margin:0 auto}
+
+.card{background:linear-gradient(160deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:16px;padding:clamp(18px,1.9vw,26px);position:relative;overflow:hidden}
+.card h3{font-family:var(--disp);font-weight:600;font-size:1.12rem;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.card p{color:var(--muted);font-size:.95rem;line-height:1.55;font-weight:300}
+.card p b{color:var(--paper)}
+.card .tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
+.accent-v{border-left:3px solid var(--violet)}.accent-f{border-left:3px solid var(--flow)}.accent-b{border-left:3px solid var(--blue)}.accent-c{border-left:3px solid var(--conflict)}.accent-l{border-left:3px solid var(--leader)}
+
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.dot.v{background:var(--violet)}.dot.f{background:var(--flow)}.dot.b{background:var(--blue)}.dot.c{background:var(--conflict)}.dot.l{background:var(--leader)}
+
+ul.feat{list-style:none;display:flex;flex-direction:column;gap:13px;margin-top:6px}
+ul.feat li{display:flex;gap:14px;align-items:flex-start;font-size:1rem;line-height:1.5;color:#3c4c64;font-weight:300}
+ul.feat li b{color:var(--paper);font-weight:600}
+ul.feat li .ic{flex:0 0 auto;margin-top:3px}
+
+.kicker{font-family:var(--mono);color:var(--violet);font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px}
+.pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.74rem;padding:6px 14px;border-radius:999px;background:rgba(20,35,59,.05);border:1px solid var(--line2);color:var(--muted)}
+
+.callout{background:rgba(124,92,240,.10);border:1px solid rgba(167,139,250,.28);border-radius:14px;padding:18px 22px;color:#5a3fc0;font-size:.95rem;line-height:1.6;font-weight:300}
+.callout.f{background:rgba(13,148,136,.10);border-color:rgba(45,212,191,.28);color:#0a6b61}
+.callout.c{background:rgba(214,69,60,.10);border-color:rgba(244,115,107,.3);color:#a83a30}
+.callout.l{background:rgba(201,127,10,.12);border-color:rgba(245,166,35,.28);color:#80560a}
+.callout b{font-weight:600}
+code,.mono{font-family:var(--mono)}
+.eq{font-family:var(--mono);font-size:clamp(1.2rem,2.6vw,2rem);color:var(--violet);letter-spacing:.03em}
+
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+.chip{font-family:var(--mono);font-size:.72rem;padding:5px 11px;border-radius:8px;background:rgba(20,35,59,.05);border:1px solid var(--line);color:#566480}
+
+.hud{position:fixed;z-index:30;bottom:22px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:18px;pointer-events:none}
+.hud .grp{pointer-events:auto;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.82);backdrop-filter:blur(10px);border:1px solid var(--line2);border-radius:999px;padding:8px 16px}
+.navbtn{background:none;border:none;color:var(--paper);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;opacity:.8;transition:.2s}
+.navbtn:hover{opacity:1;color:var(--violet)}
+.counter{font-family:var(--mono);font-size:.8rem;color:var(--muted);min-width:62px;text-align:center}
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--violet),var(--blue));z-index:40;transition:width .4s ease}
+.chnav{position:fixed;top:18px;left:clamp(20px,4vw,60px);z-index:30;font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.chnav b{color:var(--violet)}
+.hint{position:fixed;top:18px;right:clamp(20px,4vw,60px);z-index:30;font-family:var(--mono);font-size:.68rem;color:var(--muted);opacity:.7}
+
+.node{fill:var(--panel);stroke:var(--line2);stroke-width:1.5}
+.nlabel{font-family:var(--mono);font-size:11px;fill:var(--paper)}
+.nsub{font-family:var(--mono);font-size:9px;fill:var(--muted)}
+.link{stroke:var(--line2);stroke-width:2;fill:none}
+.link-flow{stroke:var(--violet);stroke-width:2.5;fill:none;stroke-dasharray:7 7}
+.slide.active .link-flow{animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-28}}
+.pk{r:5;opacity:0}
+.slide.active .pk{animation:pkf 2.2s ease-in-out infinite}
+@keyframes pkf{0%{opacity:0}12%{opacity:1}88%{opacity:1}100%{opacity:0}}
+
+.title-wrap{max-width:1100px}
+.title-meta{display:flex;gap:30px;margin-top:38px;flex-wrap:wrap}
+.title-meta .m{border-left:2px solid var(--line2);padding-left:16px}
+.title-meta .m .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--violet);margin-bottom:6px}
+.title-meta .m .v{font-size:.95rem;color:var(--muted);font-weight:300;max-width:26ch}
+
+.numbered{counter-reset:step;display:flex;flex-direction:column;gap:14px}
+.numbered .step{display:flex;gap:18px;align-items:flex-start}
+.numbered .step .n{counter-increment:step;flex:0 0 auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;color:var(--violet);background:rgba(124,92,240,.10)}
+.numbered .step .n::before{content:counter(step)}
+.numbered .step .t{font-size:1rem;line-height:1.5;color:#3c4c64;font-weight:300;padding-top:7px}
+.numbered .step .t b{color:var(--paper);font-weight:600}
+
+.scroll{overflow-y:auto;max-height:100%}
+table.cmp{width:100%;border-collapse:collapse;font-size:.92rem}
+table.cmp th,table.cmp td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;font-weight:300;color:#3c4c64}
+table.cmp th{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+table.cmp td:first-child{color:var(--paper);font-weight:500;white-space:nowrap}
+
+/* shard boxes */
+.shardrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.shardbox{flex:1;min-width:90px;border:1px solid var(--line2);border-radius:10px;padding:12px;text-align:center;font-family:var(--mono);font-size:.78rem}
+.shardbox .hd{color:var(--violet);font-size:.66rem;letter-spacing:.1em;margin-bottom:6px}
+.shardbox .ky{color:#3c4c64;line-height:1.7}
+
+small.src{color:var(--muted);font-family:var(--mono);font-size:.7rem;opacity:.7}
+
+@media(max-width:860px){.c2,.c3,.split{grid-template-columns:1fr}.split{gap:24px}.hint{display:none}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="progress" id="prog"></div>
+<div class="chnav">DDIA · <b>CH 7</b> · 샤딩</div>
+<div class="hint">← → 또는 클릭으로 이동</div>
+
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide">
+  <div class="title-wrap">
+    <div class="eyebrow r">Chapter 7 · Designing Data-Intensive Applications</div>
+    <h1 class="r" style="font-size:clamp(2.8rem,8vw,6.5rem)">샤딩<br><span style="color:var(--violet)">Sharding</span></h1>
+    <p class="lead r" style="margin-top:24px">데이터나 쓰기 처리량이 한 노드가 감당하기엔 너무 클 때, 데이터를 <b>더 작은 샤드(파티션)</b>로 쪼개 서로 다른 노드에 둔다. 각 레코드는 정확히 하나의 샤드에 속한다.</p>
+    <div class="title-meta r">
+      <div class="m"><div class="k">키 범위</div><div class="v">정렬된 키 범위를 샤드에 할당 — 범위 질의에 유리</div></div>
+      <div class="m"><div class="k">키 해시</div><div class="v">키를 해싱해 분산 — 부하 균등, 범위 질의 비효율</div></div>
+      <div class="m"><div class="k">+ 복제</div><div class="v">각 샤드는 여러 노드에 복제돼 내결함성 확보</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 TWO WAYS / COMBINED -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">데이터 분산의 두 방식</div>
+      <h2 class="r">복제 + 샤딩</h2>
+      <ul class="feat r" style="margin-top:18px">
+        <li><span class="dot f ic"></span><span><b>복제(6장)</b> — 같은 데이터의 복사본을 여러 노드에.</span></li>
+        <li><span class="dot v ic"></span><span><b>샤딩(이 장)</b> — 데이터를 쪼개 다른 샤드를 다른 노드에.</span></li>
+      </ul>
+      <p class="lead r" style="margin-top:18px">보통 둘을 함께 쓴다. 단일 리더 복제와 결합하면 — <b>각 샤드의 리더가 한 노드</b>에, 팔로워는 다른 노드에. 한 노드가 어떤 샤드의 리더이자 다른 샤드의 팔로워일 수 있다.</p>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 320 240" width="100%">
+        <text x="10" y="20" class="nsub">노드 A</text>
+        <rect x="10" y="28" width="70" height="30" rx="6" fill="rgba(245,166,35,.16)" stroke="var(--leader)" stroke-width="1.5"/><text x="45" y="47" text-anchor="middle" class="nsub">S1 리더</text>
+        <rect x="10" y="64" width="70" height="30" rx="6" fill="rgba(45,212,191,.12)" stroke="var(--flow)" stroke-width="1.5"/><text x="45" y="83" text-anchor="middle" class="nsub">S2 팔로워</text>
+        <text x="125" y="20" class="nsub">노드 B</text>
+        <rect x="125" y="28" width="70" height="30" rx="6" fill="rgba(45,212,191,.12)" stroke="var(--flow)" stroke-width="1.5"/><text x="160" y="47" text-anchor="middle" class="nsub">S1 팔로워</text>
+        <rect x="125" y="64" width="70" height="30" rx="6" fill="rgba(245,166,35,.16)" stroke="var(--leader)" stroke-width="1.5"/><text x="160" y="83" text-anchor="middle" class="nsub">S2 리더</text>
+        <text x="240" y="20" class="nsub">노드 C</text>
+        <rect x="240" y="28" width="70" height="30" rx="6" fill="rgba(45,212,191,.12)" stroke="var(--flow)" stroke-width="1.5"/><text x="275" y="47" text-anchor="middle" class="nsub">S1 팔로워</text>
+        <rect x="240" y="64" width="70" height="30" rx="6" fill="rgba(45,212,191,.12)" stroke="var(--flow)" stroke-width="1.5"/><text x="275" y="83" text-anchor="middle" class="nsub">S2 팔로워</text>
+        <path d="M80 43 L 123 43" class="link-flow"/><path d="M80 50 C 150 130, 220 80, 240 46" class="link-flow"/>
+        <path d="M195 79 L 238 79" class="link-flow"/><path d="M125 79 C 100 140, 60 110, 50 96" class="link-flow"/>
+        <text x="160" y="180" text-anchor="middle" class="nlabel" fill="var(--violet)">샤드별 리더가 다른 노드에 분산</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 3 TERMINOLOGY -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">용어 정리</div>
+    <h2 class="r">"샤드"는 소프트웨어마다 이름이 다르다</h2>
+    <div class="chips r" style="margin-top:22px">
+      <span class="chip">Kafka · partition</span><span class="chip">CockroachDB · range</span><span class="chip">HBase·TiDB · region</span><span class="chip">Couchbase · vBucket</span><span class="chip">Riak · vnode</span><span class="chip">Cassandra · token-range</span><span class="chip">Bigtable·YugabyteDB·ScyllaDB · tablet</span>
+    </div>
+    <div class="cols c2 r" style="margin-top:26px">
+      <div class="callout">일부 DB는 파티션과 샤드를 구분한다. <b>PostgreSQL</b>에서 파티셔닝은 큰 테이블을 같은 머신의 여러 파일로 쪼개는 것(파티션 통째 삭제가 빠름), <b>샤딩</b>은 여러 머신에 분산. 많은 시스템에선 둘이 동의어다.</div>
+      <div class="callout l"><b>어원:</b> 온라인 RPG <i>Ultima Online</i>에서 마법 수정이 조각(shard)나며 각 조각이 게임 세계의 복사본을 비췄다는 설. 한편 네트워크 파티션(netsplit)과는 <b>전혀 무관</b>하다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 PROS CONS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">샤딩의 장단점</div>
+    <h2 class="r">확장성을 얻고 복잡성을 치른다</h2>
+    <div class="cols c2" style="margin-top:20px">
+      <div class="card accent-f r"><h3><span class="dot f"></span>왜 하는가 — 확장성</h3><p>데이터·쓰기 처리량이 한 노드를 넘으면 여러 노드로 분산. <b>수평 확장(scale-out)</b>의 핵심 도구. 워크로드를 균등 분할하면 노드 추가로 용량을 키운다. (읽기만 문제면 읽기 확장으로 충분)</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>왜 신중한가 — 복잡성</h3><p><b>파티션 키</b>를 정해야 하고(같은 키는 같은 샤드), 키를 모르면 모든 샤드를 비효율적으로 뒤져야 한다. 샤딩 스킴은 바꾸기 어렵다. 보조 인덱스·조인은 까다롭고, 여러 샤드 쓰기는 <b>분산 트랜잭션</b>(보통 훨씬 느림)이 필요하다.</p></div>
+    </div>
+    <div class="cols c2 r" style="margin-top:18px">
+      <div class="callout">한 머신이 감당할 수 있다면(요즘 머신은 많은 걸 할 수 있다!) <b>샤딩을 피하고 단일 샤드</b>가 낫다.</div>
+      <div class="callout f">단일 머신 내에서도 샤딩을 쓴다 — CPU 코어당 단일 스레드 프로세스 하나로 병렬성·NUMA를 활용. <span class="mono" style="color:var(--muted)">Redis · VoltDB · FoundationDB</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 MULTITENANCY ADV -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">멀티테넌시를 위한 샤딩</div>
+    <h2 class="r">테넌트마다(또는 묶어서) 샤드</h2>
+    <p class="lead r" style="margin-top:8px">SaaS·클라우드는 흔히 멀티테넌트 — 각 테넌트(고객)는 독립된 데이터셋을 가진다. 테넌트별 샤딩의 이점:</p>
+    <div class="cols c3" style="margin-top:20px">
+      <div class="card accent-v r"><h3>자원 격리</h3><p>한 테넌트의 비싼 연산이 다른 테넌트 성능에 영향을 덜 준다.</p></div>
+      <div class="card accent-v r"><h3>권한 격리</h3><p>접근 제어 버그가 있어도 다른 테넌트 데이터에 실수로 접근할 위험↓.</p></div>
+      <div class="card accent-v r"><h3>셀 기반 아키텍처</h3><p>서비스+스토리지를 자족적 <b>셀</b>로 묶어 장애 격리 — 한 셀 장애가 다른 셀에 안 번진다.</p></div>
+      <div class="card accent-v r"><h3>테넌트별 백업·복원</h3><p>한 테넌트 상태만 백업에서 복원, 타 테넌트 영향 없음.</p></div>
+      <div class="card accent-v r"><h3>규제 준수</h3><p>GDPR·CCPA의 데이터 접근·삭제권을 샤드 단위 export·삭제로 단순화.</p></div>
+      <div class="card accent-v r"><h3>데이터 거주·점진 롤아웃</h3><p>특정 관할권에 샤드 배치(데이터 거주법). 스키마 마이그레이션을 테넌트별 점진 적용해 위험↓.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 MULTITENANCY CHALLENGES -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">멀티테넌시의 도전</div>
+      <h2 class="r">테넌트 샤딩의 현실적 한계</h2>
+    </div>
+    <div class="r">
+      <ul class="feat">
+        <li><span class="dot c ic"></span><span>각 테넌트가 한 노드에 들어갈 만큼 작아야 한다. 한 테넌트가 너무 크면 그 안에서 또 샤딩해야 한다 → 확장성 샤딩 문제로 회귀.</span></li>
+        <li><span class="dot c ic"></span><span>작은 테넌트가 아주 많으면 테넌트마다 샤드를 만드는 오버헤드가 크다. 묶으면 — 성장 시 테넌트를 옮기는 문제가 생긴다.</span></li>
+        <li><span class="dot c ic"></span><span>여러 테넌트에 걸친 기능이 필요해지면, 여러 샤드를 조인해야 해 구현이 어려워진다.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 7 KV GOAL SKEW -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">키-값 데이터 샤딩</div>
+    <h2 class="r">목표: 데이터와 부하를 균등하게</h2>
+    <p class="lead r" style="margin-top:10px">균등하면 10개 노드가 단일 노드의 10배 데이터·처리량을 (이론상) 감당한다. 노드 추가·제거 시 <b>리밸런싱</b>으로 다시 고르게 분산해야 한다.</p>
+    <div class="cols c2" style="margin-top:24px">
+      <div class="card accent-c r"><h3><span class="dot c"></span>치우침 (Skew)</h3><p>일부 샤드에 데이터·질의가 몰리면 샤딩 효과가 크게 떨어진다. 극단적으로 모든 부하가 한 샤드에 몰려 9/10 노드가 놀 수 있다.</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>핫스팟 · 핫키</h3><p>부하가 과도하게 높은 샤드 = <b>핫 샤드(hot spot)</b>. 한 키가 특히 부하 높으면(소셜의 셀럽) = <b>핫 키(hot key)</b>.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:20px">파티션 키를 입력받아 어느 샤드인지 알려주는 알고리즘이 필요하다. 키-값 저장소에선 보통 키(또는 키의 첫 부분), 관계형에선 테이블의 한 컬럼(꼭 PK일 필요는 없음)이 파티션 키다. 이 알고리즘은 <b>리밸런싱이 가능</b>해야 한다.</p>
+  </div>
+</section>
+
+<!-- 8 KEY RANGE -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">키 범위 샤딩</div>
+      <h2 class="r">백과사전처럼 연속 범위 할당</h2>
+      <p class="lead r" style="margin-top:14px">최소~최대 키의 연속 범위를 각 샤드에 할당. 제목으로 찾으면 어느 권(샤드)에 있는지 바로 안다. 범위가 균등하지 않을 수 있어(A·B 한 권, T~Z 한 권) <b>경계가 데이터에 맞게 적응</b>해야 한다.</p>
+      <ul class="feat r" style="margin-top:16px">
+        <li><span class="dot f ic"></span><span>샤드 내 키는 정렬 저장(B-트리·SSTable) → <b>범위 스캔</b>이 쉽다.</span></li>
+        <li><span class="dot c ic"></span><span>인접 키에 쓰기가 몰리면 <b>핫 샤드</b> — 타임스탬프 키면 이번 달 샤드에 쓰기 집중.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="shardrow">
+        <div class="shardbox"><div class="hd">권 1</div><div class="ky">A · B</div></div>
+        <div class="shardbox"><div class="hd">권 2</div><div class="ky">C · D · E</div></div>
+        <div class="shardbox"><div class="hd">권 3</div><div class="ky">F ~ K</div></div>
+        <div class="shardbox"><div class="hd">권 12</div><div class="ky">T·U·V<br>W·X·Y·Z</div></div>
+      </div>
+      <div class="callout l" style="margin-top:16px"><b>핫스팟 회피:</b> 키 앞에 센서 ID를 붙여 정렬을 <b>센서 ID → 타임스탬프</b> 순으로. 쓰기가 분산되지만, 여러 센서를 시간 범위로 조회하려면 센서마다 별도 범위 질의가 필요해진다.</div>
+      <small class="src">Vitess(수동) · Bigtable·HBase·MongoDB·CockroachDB·FoundationDB(자동) · YugabyteDB(둘 다)</small>
+    </div>
+  </div>
+</section>
+
+<!-- 9 KEY RANGE REBALANCE -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">키 범위 리밸런싱</div>
+      <h2 class="r">분할(split)과 병합(merge)</h2>
+      <ul class="feat r" style="margin-top:16px">
+        <li><span class="dot v ic"></span><span><b>사전 분할(pre-splitting):</b> 빈 DB에 초기 샤드 집합 구성. 키 분포를 미리 알아야 함.</span></li>
+        <li><span class="dot v ic"></span><span>데이터·처리량이 늘면 샤드를 둘 이상으로 <b>분할</b>, 여러 노드에 분산. 많이 삭제되면 작은 인접 샤드를 <b>병합</b>.</span></li>
+        <li><span class="dot v ic"></span><span>분할 트리거: 설정 크기 도달(HBase 기본 10GB) 또는 쓰기 처리량이 임계 초과 → 데이터가 적어도 핫 샤드는 분할.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="callout c"><b>분할은 비싸다:</b> 모든 데이터를 새 파일로 재작성해야 한다(LSM의 컴팩션과 유사). 분할이 필요한 샤드는 보통 고부하 상태라, 분할 비용이 부하를 가중시켜 과부하 위험이 있다.</div>
+      <div class="card" style="margin-top:14px"><p>샤드 수가 데이터 양에 적응한다 — 데이터가 적으면 샤드 수도 적어 오버헤드↓, 많으면 개별 샤드 크기를 상한으로 제한.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 HASH OF KEY -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">키 해시 샤딩</div>
+      <h2 class="r">먼저 해싱한 뒤 매핑</h2>
+      <p class="lead r" style="margin-top:14px">키가 가까이 모일 필요가 없다면(예: 테넌트 ID), 파티션 키를 <b>해싱</b>해 샤드에 매핑. 좋은 해시 함수는 치우친 데이터를 <b>균등 분포</b>로 만든다 — 비슷한 입력도 해시는 고르게 퍼진다.</p>
+      <div class="callout f r" style="margin-top:16px">암호학적으로 강할 필요는 없다 — MongoDB는 MD5, Cassandra·ScyllaDB는 Murmur3.</div>
+    </div>
+    <div class="r">
+      <div class="callout c"><b>주의:</b> 언어 내장 해시는 부적합할 수 있다 — Java의 <span class="mono">Object.hashCode()</span>, Ruby의 <span class="mono">Object#hash</span>는 프로세스마다 같은 키에 다른 해시값을 줄 수 있어 샤딩에 못 쓴다.</div>
+      <div class="card accent-c" style="margin-top:14px"><h3>대가</h3><p>키의 정렬이 깨져 <b>범위 질의가 비효율적</b>이 된다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 MOD N -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">해시 mod N의 함정</div>
+      <h2 class="r">hash(key) % N 은 왜 나쁜가</h2>
+      <p class="lead r" style="margin-top:14px">노드 수 N으로 나눈 나머지로 노드를 정하면 계산은 쉽다. 그러나 <b>N이 바뀌면 대부분의 키가 이동</b>한다.</p>
+      <div class="eq r" style="margin:20px 0">3 → 4 노드 :<br>hash 3 → 노드3, hash 6 → 노드2,<br>hash 9 → 노드1 …</div>
+      <p class="lead r">불필요한 데이터 이동이 너무 많다. <b>최소한의 데이터만 이동</b>하는 방식이 필요하다.</p>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 280 200" width="100%">
+        <text x="10" y="18" class="nsub">N=3</text>
+        <rect x="10" y="26" width="60" height="26" rx="5" class="node"/><text x="40" y="43" text-anchor="middle" class="nsub">노드0</text>
+        <rect x="80" y="26" width="60" height="26" rx="5" class="node"/><text x="110" y="43" text-anchor="middle" class="nsub">노드1</text>
+        <rect x="150" y="26" width="60" height="26" rx="5" class="node"/><text x="180" y="43" text-anchor="middle" class="nsub">노드2</text>
+        <text x="10" y="100" class="nsub">N=4 (대규모 이동!)</text>
+        <rect x="10" y="108" width="55" height="26" rx="5" class="node"/><text x="37" y="125" text-anchor="middle" class="nsub">0</text>
+        <rect x="68" y="108" width="55" height="26" rx="5" class="node"/><text x="95" y="125" text-anchor="middle" class="nsub">1</text>
+        <rect x="126" y="108" width="55" height="26" rx="5" class="node"/><text x="153" y="125" text-anchor="middle" class="nsub">2</text>
+        <rect x="184" y="108" width="55" height="26" rx="5" fill="rgba(244,115,107,.16)" stroke="var(--conflict)" stroke-width="1.5"/><text x="211" y="125" text-anchor="middle" class="nsub">3 신규</text>
+        <path d="M40 54 C 60 90, 180 90, 205 106" class="link-flow" style="stroke:var(--conflict)"/>
+        <path d="M110 54 C 110 90, 95 95, 95 106" class="link-flow" style="stroke:var(--conflict)"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 12 FIXED SHARDS -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">고정 샤드 수</div>
+      <h2 class="r">노드보다 훨씬 많은 샤드를 미리</h2>
+      <p class="lead r" style="margin-top:14px">10노드 클러스터를 처음부터 <b>1,000 샤드</b>로 나눠 노드당 100개 할당. 키는 <span class="mono">hash(key) % 1000</span> 샤드에. 노드 추가 시 기존 노드의 일부 샤드만 새 노드로 <b>통째로 이동</b> — 샤드 분할보다 싸다.</p>
+      <ul class="feat r" style="margin-top:14px">
+        <li><span class="dot f ic"></span><span>샤드 수·키→샤드 매핑은 불변, <b>샤드→노드 할당만</b> 변한다.</span></li>
+        <li><span class="dot f ic"></span><span>약한 하드웨어엔 적은 샤드, 강한 노드엔 많은 샤드 할당 가능.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="callout c"><b>한계:</b> 처음에 샤드 수를 잘 추정해야 한다. 노드 수가 샤드 수를 넘어설 수 없다. 데이터 규모가 크게 변하면 — 너무 크면 리밸런싱·복구가 비싸고, 너무 작으면 오버헤드가 크다. 샤드 수가 잘못되면 <b>비싼 리샤딩</b>(각 샤드 분할·재작성, 다운타임 가능)이 필요.</div>
+      <small class="src">Citus · Riak · Elasticsearch · Couchbase. 샤드 수는 보통 여러 약수를 갖는 수로(2의 거듭제곱일 필요 없음).</small>
+    </div>
+  </div>
+</section>
+
+<!-- 13 HASH RANGE -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">해시 범위 샤딩</div>
+      <h2 class="r">키 대신 해시값의 범위를 할당</h2>
+      <p class="lead r" style="margin-top:14px">필요한 샤드 수를 미리 못 정하면, 각 샤드가 <b>해시값의 범위</b>를 갖게 한다(키 범위 + 해시 결합). 16비트 해시면 0~65,535를 샤드별로 분할 — 비슷한 키도 해시는 고르게 퍼진다.</p>
+      <ul class="feat r" style="margin-top:14px">
+        <li><span class="dot f ic"></span><span>샤드가 커지면 필요할 때 분할 → 샤드 수가 데이터 양에 적응.</span></li>
+        <li><span class="dot c ic"></span><span>파티션 키 범위 질의는 비효율(키가 모든 샤드에 흩어짐). 단, 복합 키에서 첫 컬럼이 파티션 키면 나머지 컬럼 범위 질의는 가능.</span></li>
+      </ul>
+      <small class="src">YugabyteDB·DynamoDB 사용, MongoDB 옵션. Cassandra·ScyllaDB는 변형 사용.</small>
+    </div>
+    <div class="r">
+      <div class="shardrow">
+        <div class="shardbox"><div class="hd">샤드 0</div><div class="ky">0 ~ 16383</div></div>
+        <div class="shardbox"><div class="hd">샤드 1</div><div class="ky">16384 ~ 32767</div></div>
+        <div class="shardbox"><div class="hd">샤드 2</div><div class="ky">32768 ~ 49151</div></div>
+        <div class="shardbox"><div class="hd">샤드 3</div><div class="ky">49152 ~ 65535</div></div>
+      </div>
+      <div class="callout" style="margin-top:16px"><b>Cassandra·ScyllaDB:</b> 해시 공간을 노드 수에 비례하는 무작위 경계의 범위로 나눠 노드당 여러 범위 할당(Cassandra 기본 16, ScyllaDB 256). 불균형은 여러 범위로 상쇄. 노드 추가 시 일부 범위만 새 노드로 이전.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 CONSISTENT HASHING -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">일관 해싱</div>
+      <h2 class="r">Consistent Hashing</h2>
+      <p class="lead r" style="margin-top:14px">두 성질을 만족하는 해시 함수:</p>
+      <ul class="feat r" style="margin-top:14px">
+        <li><span class="dot v ic"></span><span>각 샤드에 매핑되는 키 수가 대략 균등.</span></li>
+        <li><span class="dot v ic"></span><span>샤드 수가 바뀔 때 <b>가능한 한 적은 키만 이동</b>.</span></li>
+      </ul>
+      <div class="callout r" style="margin-top:16px">여기서 "일관(consistent)"은 복제 일관성·ACID 일관성과 무관하다 — 키가 가능하면 같은 샤드에 머무는 성향을 뜻한다.</div>
+    </div>
+    <div class="r">
+      <div class="card"><h3>변종들</h3><p>Cassandra·ScyllaDB의 방식은 원조 일관 해싱과 유사. 그 외 <b>최고 무작위 가중치(랑데부 해싱)</b>, <b>점프 일관 해싱</b> 등. 이들은 기존 샤드를 쪼개는 대신, 신규 노드에 여러 노드에 흩어져 있던 개별 키를 할당한다. 어느 쪽이 나은지는 애플리케이션에 달렸다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 HOT SPOTS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">치우친 워크로드 · 핫스팟 완화</div>
+    <h2 class="r">균등 분포 ≠ 균등 부하</h2>
+    <p class="lead r" style="margin-top:8px">일관 해싱이 키를 고르게 분산해도 <b>실제 부하</b>는 고르지 않을 수 있다. 셀럽의 게시물 하나가 같은 키로 폭발적 읽기·쓰기를 부른다.</p>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="card accent-v r"><h3>시스템 레벨</h3><p>키(또는 해시) 범위로 샤드를 정의하면 <b>핫 키를 단독 샤드</b>에, 심지어 전용 머신에 둘 수 있다. 클라우드는 자동 대응 — 아마존의 <b>열 관리(heat management)</b>·<b>적응 용량(adaptive capacity)</b>.</p></div>
+      <div class="card accent-l r"><h3>앱 레벨</h3><p>핫 키 앞뒤에 <b>난수</b> 부여 — 두 자리만 붙여도 쓰기를 100개 키로 분산. 단, 읽기는 100개 키를 모두 읽어 합쳐야 하고(쓰기만 분산), 어느 키를 분할했는지 추적하는 부기가 필요.</p></div>
+    </div>
+    <div class="callout c r" style="margin-top:18px">시간에 따라 부하가 변한다 — 바이럴 게시물은 며칠 뜨겁다 식는다. 어떤 키는 쓰기, 어떤 키는 읽기에 뜨거워 서로 다른 전략이 필요하다.</div>
+  </div>
+</section>
+
+<!-- 16 AUTO VS MANUAL -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">자동 vs 수동 리밸런싱</div>
+    <h2 class="r">사람을 루프에 둘 것인가</h2>
+    <div class="cols c2" style="margin-top:20px">
+      <div class="card accent-f r"><h3><span class="dot f"></span>완전 자동</h3><p>운영 부담↓, 워크로드 변화에 오토스케일 가능(DynamoDB는 수 분 내 샤드 추가·제거). 하지만 <b>예측 불가</b>할 수 있다 — 리밸런싱은 비싼 연산이라 네트워크·노드를 과부하시킬 수 있다.</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>자동의 위험</h3><p>자동 장애 감지와 결합하면 위험. 과부하로 느려진 노드를 죽었다 판단 → 부하를 옮김 → 다른 노드 과부하 → <b>연쇄 장애(cascading failure)</b>로 번질 수 있다.</p></div>
+    </div>
+    <div class="callout l r" style="margin-top:18px">중간 지대도 있다 — Couchbase·Riak은 자동으로 샤드 할당을 <b>제안</b>하되 관리자가 승인해야 적용. 수동 리밸런싱은 느리지만 운영상 사고를 막고, 알려진 트래픽 급증(사이버 먼데이·월드컵 티켓)에 <b>선제적</b>으로 대비할 수 있다.</div>
+  </div>
+</section>
+
+<!-- 17 REQUEST ROUTING -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">요청 라우팅</div>
+    <h2 class="r">어느 노드에 연결해야 하나?</h2>
+    <p class="lead r" style="margin-top:8px">서비스 디스커버리와 유사하지만, 키 요청은 <b>그 샤드의 복제본 노드만</b> 처리할 수 있다는 점이 다르다. 세 가지 접근:</p>
+    <div class="cols c3" style="margin-top:22px">
+      <div class="card accent-b r"><h3>① 아무 노드</h3><p>라운드로빈 LB로 아무 노드에. 그 노드가 해당 샤드를 가지면 직접 처리, 아니면 적절한 노드로 <b>전달</b> 후 응답을 중계.</p></div>
+      <div class="card accent-v r"><h3>② 라우팅 계층</h3><p>모든 요청을 먼저 <b>라우팅 계층</b>으로. 요청을 처리하진 않고, 샤드를 아는 LB 역할로 전달만 한다.</p></div>
+      <div class="card accent-f r"><h3>③ 샤드-인지 클라이언트</h3><p>클라이언트가 샤드→노드 할당을 알아 <b>직접</b> 적절한 노드에 연결, 중개자 없음.</p></div>
+    </div>
+    <div class="callout c r" style="margin-top:18px"><b>핵심 난제:</b> 누가 샤드 배치를 결정하나(코디네이터의 내결함성·스플릿 브레인 방지)? 라우팅 주체는 할당 변경을 어떻게 학습하나? 샤드 이전 중 옛 노드로 향하던 요청은?</div>
+  </div>
+</section>
+
+<!-- 18 ROUTING ZK -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">코디네이션 서비스</div>
+      <h2 class="r">ZooKeeper · etcd로 할당 추적</h2>
+      <p class="lead r" style="margin-top:14px">많은 분산 시스템이 별도 코디네이션 서비스로 샤드 할당을 추적한다. <b>합의 알고리즘</b>(10장)으로 내결함성·스플릿 브레인 방지. 각 노드가 등록하면 ZooKeeper가 권위 있는 샤드→노드 매핑을 유지하고, 변경 시 라우팅 계층에 알린다.</p>
+      <div class="chips r" style="margin-top:16px">
+        <span class="chip">HBase·SolrCloud · ZooKeeper</span><span class="chip">Kubernetes · etcd</span><span class="chip">MongoDB · config server + mongos</span><span class="chip">Kafka·TiDB·ScyllaDB · 내장 Raft</span>
+      </div>
+    </div>
+    <div class="r">
+      <div class="callout c"><b>Riak는 다른 길:</b> 노드 간 <b>가십 프로토콜</b>로 클러스터 상태 변화를 전파. 합의보다 약한 일관성이라 스플릿 브레인이 가능하지만, 리더리스 DB는 어차피 약한 일관성을 견디므로 용인한다.</div>
+      <div class="card" style="margin-top:14px"><p>클라이언트가 연결할 IP는 샤드 할당보다 덜 자주 바뀌므로, 이 목적엔 보통 <b>DNS</b>로 충분하다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 SECONDARY INDEX INTRO -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">샤딩과 보조 인덱스</div>
+    <h2 class="r">보조 인덱스는 샤드에 깔끔히 안 맞는다</h2>
+    <p class="lead r" style="margin-top:10px">지금까진 클라이언트가 파티션 키를 안다고 가정했다. <b>보조 인덱스</b>는 레코드를 유일 식별하는 게 아니라 특정 값의 출현을 검색한다 — "사용자 123의 모든 행동", "빨간 차 전부". 전문 검색 엔진(Solr·Elasticsearch)의 존재 이유이기도 하다.</p>
+    <div class="cols c2 r" style="margin-top:24px">
+      <div class="card accent-f"><h3><span class="dot f"></span>로컬 인덱스</h3><p>각 샤드가 자기 레코드만 인덱싱. 쓰기는 한 샤드만, 읽기는 모든 샤드 조회.</p></div>
+      <div class="card accent-v"><h3><span class="dot v"></span>전역 인덱스</h3><p>모든 샤드 데이터를 덮되, 인덱스 자체를 인덱싱 값으로 별도 샤딩.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 20 LOCAL SECONDARY -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">로컬 보조 인덱스</div>
+      <h2 class="r">문서-파티션 인덱스</h2>
+      <p class="lead r" style="margin-top:14px">중고차 사이트: ID로 샤딩(0~499 샤드0, 500~999 샤드1). color·make 인덱스를 각 샤드가 <b>자기 레코드에 대해서만</b> 유지. 빨간 차가 추가되면 그 샤드가 <span class="mono">color:red</span> 포스팅 리스트에 ID 추가.</p>
+      <ul class="feat r" style="margin-top:14px">
+        <li><span class="dot f ic"></span><span>파티션 키를 알면 해당 샤드만 검색. 일부 결과만 원하면 아무 샤드에나.</span></li>
+        <li><span class="dot c ic"></span><span>전체 결과를 원하고 파티션 키를 모르면 <b>모든 샤드</b>에 질의 후 결합 — 꼬리 지연 증폭, 확장성 제한.</span></li>
+      </ul>
+      <small class="src">MongoDB · Riak · Cassandra · Elasticsearch · SolrCloud · VoltDB</small>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 320 180" width="100%">
+        <rect x="10" y="20" width="130" height="140" rx="10" class="node"/>
+        <text x="75" y="40" text-anchor="middle" class="nsub" fill="var(--flow)">샤드 0 (ID 0~499)</text>
+        <text x="75" y="68" text-anchor="middle" class="nsub">color:red → [12,99]</text>
+        <text x="75" y="88" text-anchor="middle" class="nsub">make:audi → [12]</text>
+        <rect x="180" y="20" width="130" height="140" rx="10" class="node"/>
+        <text x="245" y="40" text-anchor="middle" class="nsub" fill="var(--flow)">샤드 1 (ID 500~999)</text>
+        <text x="245" y="68" text-anchor="middle" class="nsub">color:red → [521]</text>
+        <text x="245" y="88" text-anchor="middle" class="nsub">make:bmw → [733]</text>
+        <text x="160" y="135" text-anchor="middle" class="nsub" fill="var(--conflict)">red 차는 양쪽 샤드에 흩어짐</text>
+        <text x="160" y="152" text-anchor="middle" class="nsub" fill="var(--conflict)">→ 모든 샤드 질의 (scatter/gather)</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 21 GLOBAL SECONDARY -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">전역 보조 인덱스</div>
+      <h2 class="r">용어-파티션 인덱스</h2>
+      <p class="lead r" style="margin-top:14px">모든 샤드를 덮는 전역 인덱스를 만들되, 한 노드에 두면 병목이 되므로 <b>인덱싱 값으로 다시 샤딩</b>. color a~r은 샤드0, s~z는 샤드1. <b>용어(term)를 파티션 키</b>로 써, 찾는 값이 어느 샤드인지 안다.</p>
+      <ul class="feat r" style="margin-top:14px">
+        <li><span class="dot f ic"></span><span>단일 조건 질의(color=red)는 <b>한 샤드</b>만 읽어 포스팅 리스트를 얻는다.</span></li>
+        <li><span class="dot c ic"></span><span>여러 조건의 AND는 용어들이 다른 샤드에 → 긴 포스팅 리스트의 교집합 계산이 네트워크상 느릴 수 있다.</span></li>
+        <li><span class="dot c ic"></span><span>쓰기가 복잡 — 한 레코드가 인덱스의 여러 샤드에 영향. <b>분산 트랜잭션</b>으로 원자 갱신하거나(8장), 비동기 갱신(DynamoDB는 전역 인덱스 읽기가 stale 가능).</span></li>
+      </ul>
+      <small class="src">CockroachDB · TiDB · YugabyteDB · DynamoDB(로컬·전역 둘 다)</small>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 320 180" width="100%">
+        <rect x="10" y="20" width="130" height="140" rx="10" class="node"/>
+        <text x="75" y="40" text-anchor="middle" class="nsub" fill="var(--violet)">인덱스 샤드 0 (a~r)</text>
+        <text x="75" y="70" text-anchor="middle" class="nsub">color:red →</text>
+        <text x="75" y="86" text-anchor="middle" class="nsub">[12,99,521]</text>
+        <text x="75" y="110" text-anchor="middle" class="nsub">make:audi → […]</text>
+        <rect x="180" y="20" width="130" height="140" rx="10" class="node"/>
+        <text x="245" y="40" text-anchor="middle" class="nsub" fill="var(--violet)">인덱스 샤드 1 (s~z)</text>
+        <text x="245" y="70" text-anchor="middle" class="nsub">color:silver →</text>
+        <text x="245" y="86" text-anchor="middle" class="nsub">[733]</text>
+        <text x="160" y="150" text-anchor="middle" class="nsub" fill="var(--flow)">color=red → 단일 샤드 조회</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 22 SUMMARY -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">7장 요약</div>
+    <h2 class="r">샤딩 — 한눈에</h2>
+    <p class="lead r" style="margin-top:6px">목표는 데이터·질의 부하를 머신에 <b>균등 분산</b>해 핫스팟을 피하는 것. 데이터에 맞는 스킴을 고르고, 노드 추가·제거 시 리밸런싱한다.</p>
+    <div class="cols c2" style="margin-top:18px">
+      <div class="r">
+        <div class="kicker">두 가지 샤딩 방식</div>
+        <ul class="feat">
+          <li><span class="dot f ic"></span><span><b>키 범위 샤딩</b> — 정렬된 키 범위를 소유. 범위 질의 효율적이나 인접 키 핫스팟 위험. 너무 커지면 둘로 분할.</span></li>
+          <li><span class="dot v ic"></span><span><b>해시 샤딩</b> — 해시값 범위를 소유. 정렬 파괴로 범위 질의 비효율, 부하는 더 균등. 보통 고정 수 샤드를 만들어 노드 간 통째 이동.</span></li>
+        </ul>
+        <div class="callout l" style="margin-top:14px">키 첫 부분을 파티션 키로, 나머지로 샤드 내 정렬 → 같은 파티션 키 안에서 범위 질의 유지.</div>
+      </div>
+      <div class="r">
+        <div class="kicker">보조 인덱스의 두 방식</div>
+        <ul class="feat">
+          <li><span class="dot f ic"></span><span><b>로컬</b> — 같은 샤드에 인덱스 저장. 쓰기는 한 샤드, 읽기는 모든 샤드.</span></li>
+          <li><span class="dot v ic"></span><span><b>전역</b> — 인덱싱 값 기준 별도 샤딩. 쓰기는 여러 인덱스 샤드 갱신, 읽기(포스팅 리스트)는 한 샤드에서.</span></li>
+        </ul>
+        <div class="callout c" style="margin-top:14px">각 샤드는 대체로 독립 동작 — 그것이 확장의 비결이다. 그러나 <b>여러 샤드에 쓰기</b>가 필요할 때(한 샤드 성공·다른 샤드 실패 시?)가 문제다 — 다음 장들에서 다룬다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="hud">
+  <div class="grp">
+    <button class="navbtn" id="prev" aria-label="이전">&#10094;</button>
+    <span class="counter" id="ctr">01 / 22</span>
+    <button class="navbtn" id="next" aria-label="다음">&#10095;</button>
+  </div>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let i=0;
+const ctr=document.getElementById('ctr');
+const prog=document.getElementById('prog');
+function pad(n){return String(n).padStart(2,'0')}
+function show(n){
+  i=Math.max(0,Math.min(slides.length-1,n));
+  slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+  ctr.textContent=pad(i+1)+' / '+pad(slides.length);
+  prog.style.width=((i+1)/slides.length*100)+'%';
+}
+document.getElementById('next').onclick=()=>show(i+1);
+document.getElementById('prev').onclick=()=>show(i-1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(i+1)}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1)}
+  if(e.key==='Home')show(0);
+  if(e.key==='End')show(slides.length-1);
+});
+let sx=null;
+document.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{
+  if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;
+  if(Math.abs(dx)>50)show(i+(dx<0?1:-1));sx=null;
+});
+document.getElementById('deck').addEventListener('click',e=>{
+  if(e.target.closest('.hud'))return;
+  const x=e.clientX/window.innerWidth;
+  if(x>0.66)show(i+1);else if(x<0.34)show(i-1);
+});
+show(0);
+</script>
+</body>
+</html>
