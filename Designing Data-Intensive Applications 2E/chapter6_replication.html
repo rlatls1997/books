@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6장 · 복제 (Replication)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#f6f8fc;
+  --ink2:#eef2f8;
+  --panel:#ffffff;
+  --paper:#14233b;
+  --muted:#5e7088;
+  --leader:#c97f0a;
+  --flow:#0d9488;
+  --blue:#2f6fd0;
+  --conflict:#d6453c;
+  --line:rgba(20,35,59,0.10);
+  --line2:rgba(20,35,59,0.18);
+  --disp:'Space Grotesk','Noto Sans KR',sans-serif;
+  --body:'Inter','Noto Sans KR',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--body);
+  background:var(--ink);
+  color:var(--paper);
+  -webkit-font-smoothing:antialiased;
+}
+/* grid background */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:54px 54px;
+  mask-image:radial-gradient(ellipse 90% 80% at 50% 45%,#000 35%,transparent 90%);
+  opacity:.5;
+}
+.bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+   radial-gradient(700px 500px at 18% 12%,rgba(201,127,10,.05),transparent 60%),
+   radial-gradient(800px 600px at 85% 85%,rgba(13,148,136,.05),transparent 60%);
+}
+
+.deck{position:relative;z-index:2;height:100%;width:100%}
+.slide{
+  position:absolute;inset:0;
+  display:none;
+  flex-direction:column;
+  justify-content:center;
+  padding:clamp(28px,5.5vw,90px);
+  opacity:0;
+}
+.slide.active{display:flex;animation:slideIn .55s cubic-bezier(.22,.61,.36,1) both}
+@keyframes slideIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+/* eyebrow */
+.eyebrow{
+  font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--leader);
+  display:flex;align-items:center;gap:12px;margin-bottom:18px;
+}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--leader)}
+.slide h1{font-family:var(--disp);font-weight:700;line-height:1.04;letter-spacing:-.02em}
+.slide h2{font-family:var(--disp);font-weight:600;font-size:clamp(1.6rem,3.4vw,2.9rem);line-height:1.08;letter-spacing:-.01em;margin-bottom:10px}
+.lead{color:var(--muted);font-size:clamp(1rem,1.5vw,1.2rem);max-width:60ch;line-height:1.6;font-weight:300}
+
+/* reveal */
+.r{opacity:0;transform:translateY(16px)}
+.slide.active .r{animation:rise .6s cubic-bezier(.22,.61,.36,1) forwards}
+.slide.active .r:nth-child(1){animation-delay:.05s}
+.slide.active .r:nth-child(2){animation-delay:.14s}
+.slide.active .r:nth-child(3){animation-delay:.23s}
+.slide.active .r:nth-child(4){animation-delay:.32s}
+.slide.active .r:nth-child(5){animation-delay:.41s}
+.slide.active .r:nth-child(6){animation-delay:.5s}
+.slide.active .r:nth-child(7){animation-delay:.59s}
+.slide.active .r:nth-child(8){animation-delay:.68s}
+@keyframes rise{to{opacity:1;transform:none}}
+.d1{animation-delay:.1s!important}.d2{animation-delay:.25s!important}.d3{animation-delay:.4s!important}.d4{animation-delay:.55s!important}.d5{animation-delay:.7s!important}.d6{animation-delay:.85s!important}
+
+/* layouts */
+.cols{display:grid;gap:clamp(16px,2.4vw,34px)}
+.c2{grid-template-columns:1fr 1fr}
+.c3{grid-template-columns:repeat(3,1fr)}
+.split{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(20px,3vw,50px);align-items:center}
+.maxw{max-width:1180px;width:100%;margin:0 auto}
+
+/* card */
+.card{
+  background:linear-gradient(160deg,var(--panel),var(--ink2));
+  border:1px solid var(--line);border-radius:16px;
+  padding:clamp(18px,1.9vw,26px);position:relative;overflow:hidden;
+}
+.card h3{font-family:var(--disp);font-weight:600;font-size:1.12rem;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.card p{color:var(--muted);font-size:.95rem;line-height:1.55;font-weight:300}
+.card .tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
+.accent-l{border-left:3px solid var(--leader)}
+.accent-f{border-left:3px solid var(--flow)}
+.accent-b{border-left:3px solid var(--blue)}
+.accent-c{border-left:3px solid var(--conflict)}
+
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.dot.l{background:var(--leader)}.dot.f{background:var(--flow)}.dot.b{background:var(--blue)}.dot.c{background:var(--conflict)}
+
+ul.feat{list-style:none;display:flex;flex-direction:column;gap:13px;margin-top:6px}
+ul.feat li{display:flex;gap:14px;align-items:flex-start;font-size:1rem;line-height:1.5;color:#3c4c64;font-weight:300}
+ul.feat li b{color:var(--paper);font-weight:600}
+ul.feat li .ic{flex:0 0 auto;margin-top:3px}
+
+.kicker{font-family:var(--mono);color:var(--flow);font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px}
+
+.pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.74rem;
+  padding:6px 14px;border-radius:999px;background:rgba(20,35,59,.05);border:1px solid var(--line2);color:var(--muted)}
+
+.callout{background:rgba(201,127,10,.12);border:1px solid rgba(245,166,35,.28);border-radius:14px;padding:18px 22px;color:#80560a;font-size:.95rem;line-height:1.6;font-weight:300}
+.callout.f{background:rgba(13,148,136,.10);border-color:rgba(45,212,191,.28);color:#0a6b61}
+.callout.c{background:rgba(214,69,60,.10);border-color:rgba(244,115,107,.3);color:#a83a30}
+.callout b{font-weight:600}
+
+code,.mono{font-family:var(--mono)}
+.eq{font-family:var(--mono);font-size:clamp(1.4rem,3vw,2.4rem);color:var(--leader);letter-spacing:.04em}
+
+/* chips list */
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+.chip{font-family:var(--mono);font-size:.72rem;padding:5px 11px;border-radius:8px;background:rgba(20,35,59,.05);border:1px solid var(--line);color:#566480}
+
+/* nav */
+.hud{position:fixed;z-index:30;bottom:22px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:18px;pointer-events:none}
+.hud .grp{pointer-events:auto;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.82);backdrop-filter:blur(10px);border:1px solid var(--line2);border-radius:999px;padding:8px 16px}
+.navbtn{background:none;border:none;color:var(--paper);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;opacity:.8;transition:.2s}
+.navbtn:hover{opacity:1;color:var(--leader)}
+.counter{font-family:var(--mono);font-size:.8rem;color:var(--muted);min-width:62px;text-align:center}
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--leader),var(--flow));z-index:40;transition:width .4s ease}
+.chnav{position:fixed;top:18px;left:clamp(20px,4vw,60px);z-index:30;font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.chnav b{color:var(--leader)}
+
+.hint{position:fixed;top:18px;right:clamp(20px,4vw,60px);z-index:30;font-family:var(--mono);font-size:.68rem;color:var(--muted);opacity:.7}
+
+/* node diagram bits */
+.node{fill:var(--panel);stroke:var(--line2);stroke-width:1.5}
+.node-l{fill:rgba(245,166,35,.16);stroke:var(--leader);stroke-width:2}
+.node-f{fill:rgba(45,212,191,.14);stroke:var(--flow);stroke-width:2}
+.node-c{fill:rgba(244,115,107,.16);stroke:var(--conflict);stroke-width:2}
+.nlabel{font-family:var(--mono);font-size:11px;fill:var(--paper)}
+.nsub{font-family:var(--mono);font-size:9px;fill:var(--muted)}
+.link{stroke:var(--line2);stroke-width:2;fill:none}
+.link-flow{stroke:var(--flow);stroke-width:2.5;fill:none;stroke-dasharray:7 7}
+.slide.active .link-flow{animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-28}}
+.packet{fill:var(--flow)}
+.slide.active .packet{animation:none}
+.flowpath{offset-rotate:0deg}
+
+/* moving packet via SMIL replaced with CSS along simple lines */
+.pk{r:5;opacity:0}
+.slide.active .pk{animation:pkmove 2.2s ease-in-out infinite}
+@keyframes pkmove{0%{opacity:0}10%{opacity:1}90%{opacity:1}100%{opacity:0}}
+
+.title-wrap{max-width:1100px}
+.title-meta{display:flex;gap:30px;margin-top:38px;flex-wrap:wrap}
+.title-meta .m{border-left:2px solid var(--line2);padding-left:16px}
+.title-meta .m .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--leader);margin-bottom:6px}
+.title-meta .m .v{font-size:.95rem;color:var(--muted);font-weight:300;max-width:24ch}
+
+.quote{font-family:var(--disp);font-weight:400;font-size:clamp(1.1rem,1.9vw,1.5rem);line-height:1.5;color:#3c4c64;max-width:56ch;font-style:italic}
+.quote .by{display:block;margin-top:18px;font-style:normal;font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:var(--muted)}
+
+.numbered{counter-reset:step;display:flex;flex-direction:column;gap:14px}
+.numbered .step{display:flex;gap:18px;align-items:flex-start}
+.numbered .step .n{counter-increment:step;flex:0 0 auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;color:var(--leader);background:rgba(201,127,10,.12)}
+.numbered .step .n::before{content:counter(step)}
+.numbered .step .t{font-size:1rem;line-height:1.5;color:#3c4c64;font-weight:300;padding-top:7px}
+.numbered .step .t b{color:var(--paper);font-weight:600}
+
+.scroll{overflow-y:auto;max-height:100%}
+table.cmp{width:100%;border-collapse:collapse;font-size:.92rem}
+table.cmp th,table.cmp td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;font-weight:300;color:#3c4c64}
+table.cmp th{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+table.cmp td:first-child{color:var(--paper);font-weight:500;white-space:nowrap}
+table.cmp .sl{color:var(--leader)}
+table.cmp .ml{color:var(--flow)}
+
+.big{font-family:var(--disp);font-weight:700;font-size:clamp(2.2rem,6vw,4.4rem);line-height:1;letter-spacing:-.02em}
+
+@media(max-width:860px){
+  .c2,.c3,.split{grid-template-columns:1fr}
+  .split{gap:24px}
+  .hint{display:none}
+}
+.fadeslow{opacity:.55}
+small.src{color:var(--muted);font-family:var(--mono);font-size:.7rem;opacity:.7}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="progress" id="prog"></div>
+<div class="chnav">DDIA · <b>CH 6</b> · 복제</div>
+<div class="hint">← → 또는 클릭으로 이동</div>
+
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide">
+  <div class="title-wrap">
+    <div class="eyebrow r">Chapter 6 · Designing Data-Intensive Applications</div>
+    <h1 class="r" style="font-size:clamp(2.8rem,8vw,6.5rem)">복제<br><span style="color:var(--leader)">Replication</span></h1>
+    <p class="lead r" style="margin-top:24px">네트워크로 연결된 여러 머신에 동일한 데이터의 복사본을 유지하는 것. 변경되지 않는 데이터의 복제는 쉽다 — 모든 어려움은 <b style="color:var(--paper)">변경의 전파</b>를 다루는 데 있다.</p>
+    <div class="title-meta r">
+      <div class="m"><div class="k">단일 리더</div><div class="v">한 노드만 쓰기를 받고 변경을 흘려보냄</div></div>
+      <div class="m"><div class="k">다중 리더</div><div class="v">여러 노드가 쓰기를 받고 서로 동기화</div></div>
+      <div class="m"><div class="k">리더리스</div><div class="v">리더 없이 여러 노드에 직접 읽고 씀</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 WHY -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">왜 복제하는가</div>
+    <h2 class="r">복제의 세 가지 목적</h2>
+    <div class="cols c3" style="margin-top:30px">
+      <div class="card accent-b r"><span class="tag">Latency</span><h3 style="margin-top:14px"><span class="dot b"></span>지리적 근접성</h3><p>데이터를 사용자 가까이에 두어 접근 지연을 줄인다.</p></div>
+      <div class="card accent-f r"><span class="tag">Availability</span><h3 style="margin-top:14px"><span class="dot f"></span>가용성·내구성</h3><p>일부 부품이 고장 나도 시스템이 계속 동작하게 한다.</p></div>
+      <div class="card accent-l r"><span class="tag">Throughput</span><h3 style="margin-top:14px"><span class="dot l"></span>읽기 확장</h3><p>읽기 질의를 처리하는 머신 수를 늘려 읽기 처리량을 높인다.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:26px">이 장에서는 데이터셋이 <b>각 머신에 전체가 들어갈 만큼 작다</b>고 가정한다. 너무 커서 한 머신에 안 들어가는 경우의 <b>샤딩(파티셔닝)</b>은 7장에서 다룬다. 복제 원리는 1970년대 이후 거의 바뀌지 않았다 — 네트워크의 근본 제약이 그대로이기 때문이다.</div>
+  </div>
+</section>
+
+<!-- 3 BACKUP -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">백업 vs 복제</div>
+      <h2 class="r">복제가 있어도 백업은 필요한가?</h2>
+      <p class="lead r" style="margin-top:14px"><b style="color:var(--paper)">그렇다.</b> 목적이 다르기 때문이다.</p>
+      <ul class="feat r" style="margin-top:22px">
+        <li><span class="dot f ic"></span><span><b>복제</b>는 한 노드의 쓰기를 다른 노드에 빠르게 반영한다.</span></li>
+        <li><span class="dot l ic"></span><span><b>백업</b>은 과거 스냅숏을 저장해 시간을 되돌릴 수 있게 한다.</span></li>
+        <li><span class="dot c ic"></span><span>실수로 데이터를 삭제하면 삭제도 복제본에 전파되므로, 복원하려면 <b>백업</b>이 필요하다.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="card accent-f"><h3><span class="dot f"></span>상호 보완</h3><p>백업은 복제 설정 과정의 일부가 되기도 하고, 반대로 복제 로그를 아카이빙하는 것이 백업 과정의 일부가 되기도 한다.</p></div>
+      <div class="card accent-l" style="margin-top:16px"><h3><span class="dot l"></span>오브젝트 스토리지</h3><p>현재 상태는 기본 스토리지에 두고, 자주 접근하지 않는 과거 데이터 백업은 저렴한 오브젝트 스토어에 보관하는 것이 더 경제적일 수 있다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 SINGLE LEADER MECHANICS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">단일 리더 복제 · Single-Leader</div>
+    <h2 class="r">리더-기반(주-부, active/passive) 복제</h2>
+    <div class="split" style="margin-top:18px;align-items:center">
+      <div class="r">
+        <div class="numbered">
+          <div class="step"><div class="n"></div><div class="t"><b>리더(primary)</b>: 모든 쓰기 요청을 받아 먼저 자기 로컬 스토리지에 쓴다.</div></div>
+          <div class="step"><div class="n"></div><div class="t"><b>팔로워(read replica)</b>: 리더가 보내는 <b>복제 로그/변경 스트림</b>을 받아 리더와 동일한 순서로 적용한다.</div></div>
+          <div class="step"><div class="n"></div><div class="t"><b>읽기</b>는 리더나 팔로워 어디서든 가능하지만, <b>쓰기는 오직 리더만</b> 받는다.</div></div>
+        </div>
+        <div class="chips r" style="margin-top:18px">
+          <span class="chip">PostgreSQL</span><span class="chip">MySQL</span><span class="chip">Oracle Data Guard</span><span class="chip">MongoDB</span><span class="chip">Kafka</span><span class="chip">Raft (CockroachDB·etcd·TiDB)</span>
+        </div>
+      </div>
+      <div class="r">
+        <svg viewBox="0 0 380 300" width="100%">
+          <!-- client -->
+          <rect x="20" y="20" width="90" height="40" rx="8" class="node"/>
+          <text x="65" y="38" text-anchor="middle" class="nlabel">클라이언트</text>
+          <text x="65" y="51" text-anchor="middle" class="nsub">write</text>
+          <!-- leader -->
+          <rect x="145" y="20" width="90" height="44" rx="8" class="node-l"/>
+          <text x="190" y="40" text-anchor="middle" class="nlabel">리더</text>
+          <text x="190" y="54" text-anchor="middle" class="nsub">leader</text>
+          <!-- followers -->
+          <rect x="270" y="130" width="90" height="40" rx="8" class="node-f"/>
+          <text x="315" y="153" text-anchor="middle" class="nlabel">팔로워 1</text>
+          <rect x="270" y="200" width="90" height="40" rx="8" class="node-f"/>
+          <text x="315" y="223" text-anchor="middle" class="nlabel">팔로워 2</text>
+          <rect x="20" y="200" width="90" height="40" rx="8" class="node"/>
+          <text x="65" y="218" text-anchor="middle" class="nlabel">읽기 요청</text>
+          <text x="65" y="231" text-anchor="middle" class="nsub">read · any</text>
+          <!-- links -->
+          <line x1="110" y1="42" x2="143" y2="42" class="link"/>
+          <path d="M225 64 C 300 90, 315 100, 315 128" class="link-flow"/>
+          <path d="M210 64 C 200 130, 280 180, 313 198" class="link-flow"/>
+          <line x1="110" y1="220" x2="268" y2="218" class="link"/>
+          <line x1="90" y1="200" x2="180" y2="66" class="link" stroke-dasharray="3 4"/>
+          <circle class="pk" cx="0" cy="0" r="5"><animateMotion dur="2s" repeatCount="indefinite" path="M225 64 C 300 90, 315 100, 315 128"/></circle>
+          <circle class="pk" cx="0" cy="0" r="5" style="animation-delay:.5s"><animateMotion dur="2.4s" repeatCount="indefinite" path="M210 64 C 200 130, 280 180, 313 198"/></circle>
+        </svg>
+        <p style="text-align:center;color:var(--muted);font-size:.82rem;font-family:var(--mono)">변경 스트림이 리더 → 팔로워로 흐른다</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 SYNC VS ASYNC -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">동기 vs 비동기</div>
+    <h2 class="r">언제 "성공"을 클라이언트에게 알리는가</h2>
+    <div class="cols c2 r" style="margin-top:24px">
+      <div class="card accent-f">
+        <h3><span class="dot f"></span>동기식 (Synchronous)</h3>
+        <p style="margin-bottom:12px">리더가 팔로워의 <b style="color:var(--paper)">수신 확인을 기다린 뒤</b> 성공을 보고한다.</p>
+        <p><b style="color:var(--flow)">장점</b> — 팔로워가 항상 최신 복사본을 보장. 리더가 죽어도 데이터가 살아있다.<br><b style="color:var(--conflict)">단점</b> — 팔로워가 응답하지 않으면 쓰기 전체가 막힌다.</p>
+      </div>
+      <div class="card accent-l">
+        <h3><span class="dot l"></span>비동기식 (Asynchronous)</h3>
+        <p style="margin-bottom:12px">리더가 메시지만 보내고 <b style="color:var(--paper)">응답을 기다리지 않는다.</b></p>
+        <p><b style="color:var(--flow)">장점</b> — 팔로워가 뒤처져도 리더는 계속 쓰기를 처리.<br><b style="color:var(--conflict)">단점</b> — 리더가 복구 불가로 죽으면 미복제 쓰기는 <b>유실</b>. 확정된 쓰기도 내구성을 보장 못 한다.</p>
+      </div>
+    </div>
+    <div class="callout r" style="margin-top:22px">모든 팔로워를 동기식으로 두는 건 비현실적이다 — 단 한 노드만 죽어도 전체가 멈춘다. 보통 <b>한 팔로워만 동기식, 나머지는 비동기식(semisynchronous)</b>으로 두어 최소 두 노드(리더+동기 팔로워)에 최신본을 보장한다.</div>
+  </div>
+</section>
+
+<!-- 6 QUORUM intro / fully async -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">복제 강도의 스펙트럼</div>
+    <h2 class="r">완전 동기 ↔ 정족수 ↔ 완전 비동기</h2>
+    <div class="cols c3" style="margin-top:26px">
+      <div class="card accent-f r"><h3><span class="dot f"></span>반동기 (Semisync)</h3><p>하나는 동기, 나머지는 비동기. 동기 팔로워가 느려지면 비동기 중 하나를 동기로 승격.</p></div>
+      <div class="card accent-b r"><h3><span class="dot b"></span>다수결 정족수</h3><p>5개 중 3개 등 과반을 동기로 갱신. 합의 프로토콜·자동 리더 선출 시스템에서 흔히 쓰인다. (10장)</p></div>
+      <div class="card accent-l r"><h3><span class="dot l"></span>완전 비동기</h3><p>내구성을 약화하지만, 팔로워가 많거나 지리적으로 분산된 경우 널리 쓰인다.</p></div>
+    </div>
+    <p class="lead r" style="margin-top:26px">정상 동작 시 복제는 보통 1초 미만으로 빠르다. 그러나 <b style="color:var(--paper)">보장은 없다</b> — 팔로워가 복구 중이거나, 시스템이 한계 부하이거나, 네트워크 문제가 있으면 수 분 이상 뒤처질 수 있다.</p>
+  </div>
+</section>
+
+<!-- 7 NEW FOLLOWERS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">새 팔로워 설정</div>
+    <h2 class="r">다운타임 없이 새 팔로워 추가하기</h2>
+    <p class="lead r" style="margin-top:10px">파일을 그냥 복사하면 안 된다 — 데이터가 계속 변하므로 시점이 뒤섞인다. 잠그면 가용성을 해친다. 대신:</p>
+    <div class="numbered r" style="margin-top:24px;max-width:980px">
+      <div class="step"><div class="n"></div><div class="t"><b>일관된 스냅숏</b>을 (가능하면 잠그지 않고) 리더에서 특정 시점에 찍는다.</div></div>
+      <div class="step"><div class="n"></div><div class="t">스냅숏을 새 팔로워 노드로 <b>복사</b>한다.</div></div>
+      <div class="step"><div class="n"></div><div class="t">팔로워가 리더에 접속해, 스냅숏 이후의 모든 변경을 요청한다. 이때 스냅숏은 복제 로그의 정확한 위치(PostgreSQL의 LSN, MySQL의 binlog 좌표·GTID)와 연결돼 있어야 한다.</div></div>
+      <div class="step"><div class="n"></div><div class="t">밀린 변경을 모두 처리하면 <b>따라잡았다(caught up)</b>고 하고, 이후 실시간 변경을 계속 수신한다.</div></div>
+    </div>
+    <div class="callout f r" style="margin-top:22px">복제 로그를 주기적 스냅숏과 함께 <b>오브젝트 스토어에 아카이빙</b>하면 백업·재해 복구가 되고, 1·2단계를 스토어에서 다운로드로 수행할 수 있다. (PostgreSQL의 WAL-G, SQLite의 Litestream)</div>
+  </div>
+</section>
+
+<!-- 8 OBJECT STORAGE -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">오브젝트 스토리지 기반 DB</div>
+    <h2 class="r">S3·GCS·Blob을 라이브 질의에 쓰기</h2>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="r">
+        <div class="kicker">이점</div>
+        <ul class="feat">
+          <li><span class="dot f ic"></span><span>저렴하다 — 덜 쓰이는 데이터를 싼 고지연 스토리지에, 작업 집합은 메모리·SSD·NVMe에.</span></li>
+          <li><span class="dot f ic"></span><span>멀티존·멀티리전 복제와 매우 높은 내구성, 존 간 네트워크 요금 회피.</span></li>
+          <li><span class="dot f ic"></span><span><b>조건부 쓰기(CAS)</b>로 트랜잭션·리더 선출 구현.</span></li>
+          <li><span class="dot f ic"></span><span>Parquet·Iceberg 같은 개방 포맷으로 데이터 통합 단순화.</span></li>
+        </ul>
+      </div>
+      <div class="r">
+        <div class="kicker" style="color:var(--conflict)">트레이드오프</div>
+        <ul class="feat">
+          <li><span class="dot c ic"></span><span>로컬 디스크·EBS보다 읽기/쓰기 지연이 훨씬 높다.</span></li>
+          <li><span class="dot c ic"></span><span>API 호출당 과금 → 배치 처리 강제 → 지연 증가.</span></li>
+          <li><span class="dot c ic"></span><span>객체는 보통 불변 → 큰 객체의 랜덤 쓰기는 매우 비싸다.</span></li>
+          <li><span class="dot c ic"></span><span>표준 파일시스템 인터페이스 부재(FUSE도 POSIX 일부 미지원).</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout r" style="margin-top:20px"><b>제로 디스크 아키텍처(ZDA)</b> — 모든 데이터를 오브젝트 스토리지에 영속화하고 디스크·메모리는 캐싱에만. 노드가 영속 상태를 갖지 않아 운영이 극적으로 단순해진다. <span class="mono" style="color:var(--muted)">WarpStream · Bufstream · Redpanda Serverless · SlateDB · 거의 모든 클라우드 데이터 웨어하우스</span></div>
+  </div>
+</section>
+
+<!-- 9 FOLLOWER FAILURE -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">노드 장애 처리 ①</div>
+      <h2 class="r">팔로워 장애 — 따라잡기 복구</h2>
+      <p class="lead r" style="margin-top:14px">팔로워는 로컬 로그에 받은 변경을 기록한다. 크래시·네트워크 단절 후 재시작하면:</p>
+      <ul class="feat r" style="margin-top:18px">
+        <li><span class="dot f ic"></span><span>로그에서 <b>마지막으로 처리한 트랜잭션</b>을 안다.</span></li>
+        <li><span class="dot f ic"></span><span>리더에 접속해 단절 동안의 변경을 요청·적용하면 따라잡는다.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="callout c"><b>리더의 딜레마:</b> 팔로워가 오래 사라지면 — 로그를 보관하다 디스크가 차거나(보관), 미확인 로그를 삭제해 팔로워가 백업에서 복원해야 하거나(삭제) 둘 중 하나를 택해야 한다.</div>
+      <div class="card" style="margin-top:16px"><p>처리량이 높거나 오래 오프라인이었으면 밀린 쓰기가 많아, 복구 중 팔로워와 리더 모두 부하가 높아진다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 FAILOVER -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">노드 장애 처리 ②</div>
+    <h2 class="r">리더 장애 — 페일오버(failover)</h2>
+    <p class="lead r" style="margin-top:10px">팔로워 하나를 새 리더로 승격하고, 클라이언트를 재구성하고, 다른 팔로워들이 새 리더를 따르게 한다. 자동 페일오버는 보통:</p>
+    <div class="numbered r" style="margin-top:22px;max-width:1000px">
+      <div class="step"><div class="n"></div><div class="t"><b>리더 사망 판단</b> — 완벽한 방법이 없어 대부분 타임아웃 사용(예: 30초 무응답이면 사망 간주).</div></div>
+      <div class="step"><div class="n"></div><div class="t"><b>새 리더 선택</b> — 선거 또는 컨트롤러 노드 지정. 데이터 유실을 최소화하려면 가장 최신인 복제본이 최선. 이것은 <b>합의 문제</b>(10장).</div></div>
+      <div class="step"><div class="n"></div><div class="t"><b>시스템 재구성</b> — 클라이언트가 새 리더로 쓰기를 보내게 한다. 옛 리더가 돌아오면 자신이 리더라 착각할 수 있으니, 팔로워로 강등시켜야 한다.</div></div>
+    </div>
+    <div class="callout f r" style="margin-top:22px">가장 중요한 것: <b>최신 팔로워를 새 리더로 고를 것.</b> 동기/반동기면 리더가 기다리던 그 팔로워, 비동기면 LSN이 가장 높은 팔로워. 1초 미만 유실은 견딜 만하지만 며칠 뒤처진 복제본을 고르면 재앙이다.</div>
+  </div>
+</section>
+
+<!-- 11 FAILOVER PROBLEMS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">페일오버의 함정</div>
+    <h2 class="r">잘못될 수 있는 모든 것</h2>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="card accent-c r"><h3><span class="dot c"></span>쓰기 유실</h3><p>비동기 시 새 리더가 옛 쓰기를 못 받았을 수 있다. 옛 리더 복귀 시 충돌하는 쓰기가 생기면, 보통 옛 리더의 미복제 쓰기를 <b>버린다</b> → 확정된 줄 알았던 데이터가 사라진다.</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>외부 시스템 불일치</h3><p>GitHub 사건: 뒤처진 MySQL 팔로워가 승격되며 오토인크리먼트 카운터가 뒤처져 PK를 재사용 → Redis와 불일치, <b>사생활 정보가 잘못된 사용자에게 노출</b>.</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>스플릿 브레인</h3><p>두 노드가 모두 자신을 리더라 믿는 상황. 둘 다 쓰기를 받고 충돌 해결이 없으면 데이터 유실·손상. 한쪽을 끄는 안전장치도 잘못 설계하면 양쪽이 다 꺼질 수 있다.</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>타임아웃 설정</h3><p>너무 길면 복구 지연, 너무 짧으면 불필요한 페일오버(부하 급증·네트워크 글리치). 이미 부하가 높을 때의 불필요한 페일오버는 상황을 악화시킨다.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:20px">옛 리더를 제한·차단해 스플릿 브레인을 막는 것을 <b>펜싱(fencing)</b>이라 한다. 쉬운 해법은 없어, 일부 운영팀은 자동 페일오버를 지원해도 <b>수동 페일오버</b>를 선호한다.</div>
+  </div>
+</section>
+
+<!-- 12 STATEMENT BASED -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">복제 로그 구현 ①</div>
+      <h2 class="r">구문 기반 (Statement-based)</h2>
+      <p class="lead r" style="margin-top:14px">리더가 실행한 모든 쓰기 구문(INSERT·UPDATE·DELETE)을 로그로 보내고, 팔로워가 SQL을 그대로 파싱·실행한다.</p>
+      <div class="callout f r" style="margin-top:18px">컴팩트하지만 깨지기 쉽다. 비결정성이 있으면 MySQL 5.1+는 기본적으로 행 기반으로 전환. VoltDB는 트랜잭션을 결정적으로 강제해 안전하게 사용. (상태 기계 복제)</div>
+    </div>
+    <div class="r">
+      <div class="kicker" style="color:var(--conflict)">깨지는 경우</div>
+      <ul class="feat">
+        <li><span class="dot c ic"></span><span><b>비결정 함수</b> NOW()·RAND() → 복제본마다 다른 값.</span></li>
+        <li><span class="dot c ic"></span><span><b>오토인크리먼트·기존 데이터 의존</b>(UPDATE ... WHERE) → 정확히 같은 순서로 실행돼야 함.</span></li>
+        <li><span class="dot c ic"></span><span><b>부수효과</b>(트리거·저장 프로시저·UDF) → 복제본마다 다른 효과.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 13 WAL SHIPPING -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">복제 로그 구현 ②</div>
+      <h2 class="r">WAL 배송 (Write-Ahead Log Shipping)</h2>
+      <p class="lead r" style="margin-top:14px">B-트리의 크래시 복구용 WAL을 그대로 네트워크로 보낸다. 팔로워가 처리하면 리더와 <b style="color:var(--paper)">동일한 파일</b>을 만든다. <span class="mono" style="color:var(--muted)">PostgreSQL · Oracle</span></p>
+    </div>
+    <div class="r">
+      <div class="card accent-c"><h3><span class="dot c"></span>단점: 스토리지 엔진과 강결합</h3><p>WAL은 어떤 디스크 블록의 어떤 바이트가 바뀌었는지 같은 <b>매우 저수준</b> 데이터다. 저장 포맷이 바뀌면 리더·팔로워가 다른 버전의 DB를 못 돌린다.</p></div>
+      <div class="callout c" style="margin-top:16px"><b>운영 영향:</b> 버전 불일치를 허용하지 않으면 무중단 업그레이드(팔로워 먼저 올리고 페일오버)가 불가능 → 업그레이드에 다운타임 필요.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 LOGICAL LOG -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">복제 로그 구현 ③</div>
+    <h2 class="r">논리적(행 기반) 로그</h2>
+    <p class="lead r" style="margin-top:10px">복제용과 스토리지용 로그 포맷을 분리. 행 단위로 쓰기를 기술하는 <b style="color:var(--paper)">논리 로그</b>.</p>
+    <div class="cols c3" style="margin-top:24px">
+      <div class="card accent-f r"><h3>INSERT</h3><p>삽입된 행의 모든 컬럼 새 값을 기록.</p></div>
+      <div class="card accent-f r"><h3>DELETE</h3><p>행을 유일하게 식별할 정보(보통 PK, 없으면 모든 컬럼의 옛 값).</p></div>
+      <div class="card accent-f r"><h3>UPDATE</h3><p>식별 정보 + 변경된(또는 모든) 컬럼의 새 값.</p></div>
+    </div>
+    <div class="cols c2 r" style="margin-top:22px">
+      <div class="callout f"><b>호환성:</b> 엔진 내부와 분리돼 하위 호환 유지 쉬움 → 리더·팔로워가 다른 DB 버전 가능 → <b>최소 다운타임 업그레이드</b>. (MySQL binlog, PostgreSQL 논리 복제)</div>
+      <div class="callout"><b>외부 활용:</b> 외부 앱이 파싱하기 쉬워, DB 내용을 데이터 웨어하우스·맞춤 인덱스·캐시로 보낼 수 있다 → <b>변경 데이터 캡처(CDC)</b> (12장).</div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 LAG INTRO -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">복제 지연의 문제</div>
+    <h2 class="r">결과적 일관성 (Eventual Consistency)</h2>
+    <div class="split" style="margin-top:18px">
+      <div class="r">
+        <p class="lead">읽기 대부분 + 쓰기 소량인 워크로드는 매력적인 선택지가 있다: 팔로워를 많이 만들어 읽기를 분산하는 <b style="color:var(--paper)">읽기 확장(read scaling)</b>. 하지만 이는 현실적으로 <b>비동기 복제</b>에서만 동작한다.</p>
+        <p class="lead" style="margin-top:16px">비동기 팔로워에서 읽으면 <b style="color:var(--conflict)">오래된 정보</b>를 볼 수 있다. 리더와 팔로워에 같은 질의를 동시에 하면 다른 결과가 나온다.</p>
+      </div>
+      <div class="r">
+        <div class="callout">쓰기를 멈추고 기다리면 팔로워는 결국 따라잡는다 — 그래서 <b>결과적 일관성</b>. "결국(eventually)"은 의도적으로 모호하다. 정상 시엔 1초 미만이지만, 한계 부하·네트워크 문제 시 수 초~수 분으로 커진다.</div>
+        <small class="src" style="display:block;margin-top:14px">용어는 Douglas Terry가 만들고 Werner Vogels가 대중화. NoSQL만이 아니라 비동기 복제 관계형 DB의 팔로워도 동일한 특성을 갖는다.</small>
+      </div>
+    </div>
+    <p class="lead r" style="margin-top:24px">지연이 커질 때 나타나는 <b style="color:var(--paper)">세 가지 대표적 이상 현상</b>을 살펴본다.</p>
+  </div>
+</section>
+
+<!-- 16 READ YOUR WRITES -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">이상 현상 ① </div>
+      <h2 class="r">자기 쓰기 읽기<br>(Read-after-write)</h2>
+      <p class="lead r" style="margin-top:14px">사용자가 데이터를 제출한 직후 보면, 새 데이터가 아직 복제본에 도달하지 않아 <b style="color:var(--conflict)">"내 입력이 사라졌다"</b>고 느낀다.</p>
+      <div class="callout f r" style="margin-top:18px"><b>읽기-후-쓰기 일관성</b>: 사용자가 페이지를 새로고침하면 <b>자기가 제출한 변경</b>은 항상 보이도록 보장. 타인의 변경은 나중에 보여도 된다.</div>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 360 230" width="100%">
+        <rect x="20" y="20" width="80" height="36" rx="7" class="node"/><text x="60" y="42" text-anchor="middle" class="nlabel">사용자</text>
+        <rect x="240" y="20" width="100" height="36" rx="7" class="node-l"/><text x="290" y="42" text-anchor="middle" class="nlabel">리더</text>
+        <rect x="240" y="160" width="100" height="36" rx="7" class="node-f"/><text x="290" y="182" text-anchor="middle" class="nlabel">팔로워(지연)</text>
+        <line x1="100" y1="34" x2="238" y2="34" class="link"/><text x="160" y="26" class="nsub" fill="var(--leader)">① write</text>
+        <path d="M290 56 C 290 100, 290 130, 290 158" class="link-flow"/>
+        <line x1="100" y1="50" x2="238" y2="172" class="link" stroke-dasharray="3 4"/><text x="120" y="120" class="nsub">② read → stale?</text>
+        <circle class="pk" r="5" fill="var(--conflict)"><animateMotion dur="2.6s" repeatCount="indefinite" path="M290 56 C 290 100, 290 130, 290 158"/></circle>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 17 RYW TECHNIQUES -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">읽기-후-쓰기 구현 기법</div>
+    <h2 class="r">어떻게 보장하는가</h2>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="card accent-l r"><h3>① 수정 가능 데이터는 리더에서</h3><p>사용자가 수정했을 만한 것은 리더(또는 동기 팔로워)에서 읽기. 예: 소셜 프로필은 본인만 수정 → 내 프로필은 항상 리더, 타인 것은 팔로워.</p></div>
+      <div class="card accent-l r"><h3>② 시간 기반 라우팅</h3><p>대부분이 수정 가능하면, 마지막 업데이트 후 1분간 모든 읽기를 리더로. 또는 1분 이상 뒤처진 팔로워에는 질의 금지.</p></div>
+      <div class="card accent-l r"><h3>③ 타임스탬프 기억</h3><p>클라이언트가 최근 쓰기의 타임스탬프(LSN·논리 클록·실시간 시계)를 기억 → 그 시점 이상 반영된 복제본만 읽기. 부족하면 다른 복제본으로 보내거나 대기.</p></div>
+      <div class="card accent-l r"><h3>④ 리전 라우팅</h3><p>복제본이 리전에 분산돼 있으면, 리더가 있어야 하는 요청은 리더가 있는 리전으로 라우팅해야 한다.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:20px"><b>기기 간(cross-device) 일관성:</b> 한 기기에서 입력한 걸 다른 기기에서도 봐야 한다면 — 타임스탬프 메타데이터를 <b>중앙화</b>해야 하고, 다른 기기의 연결이 같은 리전으로 라우팅되리란 보장이 없다.</div>
+  </div>
+</section>
+
+<!-- 18 REGIONS AZ -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">개념 정리</div>
+      <h2 class="r">리전과 가용 영역(AZ)</h2>
+      <ul class="feat r" style="margin-top:18px">
+        <li><span class="dot b ic"></span><span><b>리전(Region)</b> = 한 지리적 위치의 데이터센터들.</span></li>
+        <li><span class="dot f ic"></span><span><b>가용 영역(Zone/AZ)</b> = 자체 전원·냉각을 가진 개별 데이터센터. 한 리전 = 여러 존.</span></li>
+        <li><span class="dot l ic"></span><span>같은 리전의 존들은 초고속으로 연결돼, 대부분의 분산 시스템이 단일 존처럼 여러 존에 걸쳐 동작 가능.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="callout f"><b>존 장애</b>는 멀티존 구성으로 견딜 수 있지만, 한 리전의 모든 존이 죽는 <b>리전 장애</b>는 막지 못한다. 리전 장애를 견디려면 <b>멀티리전 배포</b>가 필요하며, 이는 더 높은 지연·낮은 처리량·증가한 네트워크 비용을 부른다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 MONOTONIC READS -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">이상 현상 ②</div>
+      <h2 class="r">단조 읽기<br>(Monotonic Reads)</h2>
+      <p class="lead r" style="margin-top:14px">사용자가 여러 복제본에서 읽으면 <b style="color:var(--conflict)">시간이 거꾸로 흐르는 것</b>처럼 보일 수 있다. 먼저 지연 적은 팔로워에서 댓글을 봤다가, 지연 큰 팔로워에서 그 댓글이 사라진다.</p>
+      <div class="callout f r" style="margin-top:18px"><b>단조 읽기</b>: 결과적 일관성보다 강하고 강한 일관성보다 약한 보장. 한 사용자가 연속으로 읽을 때 <b>더 오래된 데이터로 되돌아가지 않음</b>을 보장.</div>
+    </div>
+    <div class="r">
+      <div class="card accent-f"><h3>구현법</h3><p>각 사용자가 <b>항상 같은 복제본</b>에서 읽게 한다 — 예: 사용자 ID의 해시로 복제본 선택(무작위가 아니라). 단, 그 복제본이 죽으면 재라우팅 필요.</p></div>
+      <svg viewBox="0 0 340 130" width="100%" style="margin-top:14px">
+        <rect x="20" y="20" width="90" height="34" rx="7" class="node-f"/><text x="65" y="41" text-anchor="middle" class="nsub">팔로워 A · 신선</text>
+        <rect x="20" y="76" width="90" height="34" rx="7" class="node"/><text x="65" y="97" text-anchor="middle" class="nsub">팔로워 B · 지연</text>
+        <text x="160" y="42" class="nlabel" fill="var(--flow)">→ 댓글 보임</text>
+        <text x="160" y="98" class="nlabel" fill="var(--conflict)">→ 댓글 사라짐 ✕</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 20 CONSISTENT PREFIX -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">이상 현상 ③</div>
+      <h2 class="r">일관된 접두 읽기<br>(Consistent Prefix)</h2>
+      <p class="lead r" style="margin-top:14px">인과성 위반. Mrs. Cake의 답("보통 10초")이 Mr. Poons의 질문("얼마나 미래를 보세요?")보다 먼저 도착하면 — <b style="color:var(--conflict)">대답이 질문보다 먼저</b> 보인다.</p>
+      <div class="callout f r" style="margin-top:18px"><b>일관된 접두 읽기</b>: 쓰기가 특정 순서로 일어났다면, 읽는 사람도 같은 순서로 본다.</div>
+    </div>
+    <div class="r">
+      <div class="card accent-c"><h3>샤딩 DB의 문제</h3><p>여러 샤드가 독립 동작해 전역 쓰기 순서가 없을 때 발생. 어떤 부분은 옛 상태, 어떤 부분은 새 상태로 보인다.</p></div>
+      <div class="card" style="margin-top:14px"><p><b>해법:</b> 인과적으로 관련된 쓰기를 같은 샤드에 쓰기. 또는 인과 의존성을 명시적으로 추적(happens-before 관계, 후술).</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 21 LAG SOLUTIONS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">복제 지연의 해법</div>
+    <h2 class="r">앱이 아니라 DB가 보장하게 하라</h2>
+    <p class="lead r" style="margin-top:12px">지연이 수 분~수 시간으로 커지면 어떻게 되는가? "문제없음"이면 좋지만, 사용자 경험을 해친다면 더 강한 보장이 필요하다. 비동기를 동기인 척하는 것은 재앙의 씨앗이다.</p>
+    <div class="cols c2" style="margin-top:24px">
+      <div class="card accent-l r"><h3><span class="dot l"></span>강한 일관성 + ACID</h3><p>선형성(linearizability, 10장)과 ACID 트랜잭션(8장)을 제공하는 DB를 고르면, 복제의 난제를 대부분 무시하고 단일 노드처럼 다룰 수 있다.</p></div>
+      <div class="card accent-f r"><h3><span class="dot f"></span>NewSQL</h3><p>2010년대 초 NoSQL은 이런 기능이 확장성을 제한한다 주장했으나, 이후 <b>강한 일관성·트랜잭션 + 분산 DB의 내결함성·확장성</b>을 함께 제공하는 NewSQL이 등장.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:20px">그래도 더 약한 일관성의 복제를 택하는 이유: <b>네트워크 단절에 더 강하고, 트랜잭션 시스템보다 오버헤드가 낮다.</b></div>
+  </div>
+</section>
+
+<!-- 22 MULTI LEADER INTRO -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">다중 리더 복제 · Multi-Leader</div>
+    <h2 class="r">하나 이상의 노드가 쓰기를 받게 하기</h2>
+    <p class="lead r" style="margin-top:12px">단일 리더의 큰 약점: <b style="color:var(--conflict)">모든 쓰기가 한 리더를 거쳐야 한다.</b> 리더에 연결 못 하면 쓸 수 없다. 자연스러운 확장 — 여러 노드가 쓰기를 받고 각자 다른 노드로 전파(active/active, 양방향 복제). 각 리더는 동시에 다른 리더의 팔로워다.</p>
+    <div class="cols c2 r" style="margin-top:24px">
+      <div class="callout f"><b>동기식 다중 리더</b>는 사실상 단일 리더와 같다 — A→B 동기 복제 중 네트워크가 끊기면 A에 쓸 수 없으니, B를 리더로 두는 것과 다름없다.</div>
+      <div class="callout"><b>이 절은 비동기식 다중 리더</b>에 집중한다. 어떤 리더든, 다른 리더와의 연결이 끊겨도 쓰기를 처리할 수 있다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 23 GEO DISTRIBUTED -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">지리적 분산 운영</div>
+    <h2 class="r">멀티리전: 단일 리더 vs 다중 리더</h2>
+    <div class="r scroll" style="margin-top:18px">
+      <table class="cmp">
+        <tr><th>관점</th><th class="sl">단일 리더</th><th class="ml">다중 리더</th></tr>
+        <tr><td>성능</td><td>모든 쓰기가 리더 리전으로 인터넷을 건너야 함 → 큰 지연.</td><td>로컬 리전에서 처리 후 비동기 전파 → 리전 간 지연을 사용자에게 숨김.</td></tr>
+        <tr><td>리전 장애 내성</td><td>리더 리전 장애 시 다른 리전 팔로워로 페일오버.</td><td>각 리전이 독립 운영, 복귀 시 따라잡음.</td></tr>
+        <tr><td>네트워크 문제 내성</td><td>리전 간 링크에 매우 민감 — 요청·응답을 그 링크로 기다려야 함.</td><td>일시 단절 중에도 각 리전 리더가 독립적으로 쓰기 처리.</td></tr>
+        <tr><td>일관성</td><td>직렬성 등 강한 일관성 가능.</td><td><b>훨씬 약함</b> — 계좌 음수 방지·유저명 유일성 보장 불가. 분산 시스템의 근본 한계.</td></tr>
+      </table>
+    </div>
+    <div class="callout c r" style="margin-top:18px">다중 리더는 종종 후방 이식된 기능이라 오토인크리먼트 키·트리거·무결성 제약과 미묘하게 충돌한다. <b>가능하면 피해야 할 위험한 영역</b>으로 여겨진다. 단일 리전 내에선 복잡성 대비 이점이 적어 잘 쓰지 않는다.</div>
+  </div>
+</section>
+
+<!-- 24 TOPOLOGIES -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">다중 리더 토폴로지</div>
+    <h2 class="r">쓰기가 전파되는 통신 경로</h2>
+    <div class="cols c3" style="margin-top:24px">
+      <div class="card r"><h3>원형 (Circular)</h3><svg viewBox="0 0 160 120" width="100%"><circle cx="80" cy="25" r="14" class="node-l"/><circle cx="135" cy="90" r="14" class="node-l"/><circle cx="25" cy="90" r="14" class="node-l"/><path d="M92 33 L 125 80" class="link-flow"/><path d="M128 100 L 40 100" class="link-flow"/><path d="M35 80 L 68 33" class="link-flow"/></svg><p>각 노드가 한 노드에서 받아 다음으로 전달.</p></div>
+      <div class="card r"><h3>별형 (Star)</h3><svg viewBox="0 0 160 120" width="100%"><circle cx="80" cy="60" r="15" class="node-l"/><circle cx="30" cy="25" r="11" class="node-f"/><circle cx="130" cy="25" r="11" class="node-f"/><circle cx="30" cy="95" r="11" class="node-f"/><circle cx="130" cy="95" r="11" class="node-f"/><path d="M68 52 L 38 30" class="link-flow"/><path d="M92 52 L 122 30" class="link-flow"/><path d="M68 68 L 38 90" class="link-flow"/><path d="M92 68 L 122 90" class="link-flow"/></svg><p>루트 노드가 모두에게 전달. 트리로 일반화 가능.</p></div>
+      <div class="card r"><h3>전대전 (All-to-all)</h3><svg viewBox="0 0 160 120" width="100%"><circle cx="35" cy="30" r="13" class="node-l"/><circle cx="125" cy="30" r="13" class="node-l"/><circle cx="35" cy="95" r="13" class="node-l"/><circle cx="125" cy="95" r="13" class="node-l"/><path d="M48 30 L 112 30" class="link-flow"/><path d="M35 43 L 35 82" class="link-flow"/><path d="M125 43 L 125 82" class="link-flow"/><path d="M48 95 L 112 95" class="link-flow"/><path d="M45 40 L 115 85" class="link-flow"/><path d="M115 40 L 45 85" class="link-flow"/></svg><p>모든 리더가 다른 모든 리더에게 전달.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:20px">무한 복제 루프 방지: 각 노드에 고유 식별자를 주고, 쓰기에 거쳐온 노드들의 식별자를 태깅. 자기 식별자가 붙은 변경은 무시한다.</div>
+  </div>
+</section>
+
+<!-- 25 TOPOLOGY PROBLEMS -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">토폴로지의 문제</div>
+      <h2 class="r">순서가 뒤바뀐 쓰기</h2>
+      <ul class="feat r" style="margin-top:16px">
+        <li><span class="dot c ic"></span><span><b>원형·별형:</b> 한 노드만 죽어도 다른 노드 간 메시지 흐름이 끊긴다(수동 재구성 필요).</span></li>
+        <li><span class="dot c ic"></span><span><b>전대전:</b> 내결함성은 좋지만, 링크 속도 차로 메시지가 <b>추월</b>당할 수 있다 — INSERT보다 UPDATE가 먼저 도착.</span></li>
+      </ul>
+      <div class="callout c r" style="margin-top:18px">단순 타임스탬프로는 부족하다(시계가 충분히 동기화되지 않음). <b>버전 벡터(version vectors)</b>로 순서를 잡아야 한다. 많은 다중 리더 시스템이 이를 제대로 안 해 취약 — 문서를 꼼꼼히 읽고 철저히 테스트하라.</div>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 320 200" width="100%">
+        <rect x="10" y="20" width="78" height="34" rx="7" class="node-l"/><text x="49" y="41" text-anchor="middle" class="nsub">리더1 · INSERT</text>
+        <rect x="232" y="20" width="78" height="34" rx="7" class="node-l"/><text x="271" y="41" text-anchor="middle" class="nsub">리더3 · UPDATE</text>
+        <rect x="120" y="150" width="80" height="34" rx="7" class="node-c"/><text x="160" y="171" text-anchor="middle" class="nsub">리더2 ✕순서</text>
+        <path d="M70 54 C 100 110, 120 130, 150 148" class="link-flow"/>
+        <path d="M260 54 C 230 110, 200 130, 175 148" class="link-flow" style="stroke:var(--conflict)"/>
+        <text x="60" y="120" class="nsub">insert</text>
+        <text x="230" y="120" class="nsub" fill="var(--conflict)">update 먼저!</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 26 SYNC ENGINES -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">싱크 엔진 & 로컬-퍼스트</div>
+    <h2 class="r">오프라인에서도 동작하는 앱</h2>
+    <p class="lead r" style="margin-top:12px">캘린더·실시간 협업 앱(Google Docs·Figma·Linear)은 다중 리더의 극단적 형태다. <b style="color:var(--paper)">각 기기/탭이 로컬 복제본 = 리더</b>이고, 기기 간 비동기 다중 리더 복제(sync)가 일어난다. 지연은 인터넷 접속 시점에 따라 수 시간일 수도 있다.</p>
+    <div class="cols c3" style="margin-top:24px">
+      <div class="card accent-f r"><h3>싱크 엔진</h3><p>변경을 잡아 온라인이면 즉시 전송, 오프라인이면 저장 후 전송. 협업자 변경을 받아 로컬에 병합·UI 갱신.</p></div>
+      <div class="card accent-b r"><h3>오프라인-퍼스트</h3><p>오프라인에서 편집을 계속할 수 있는 앱. 오프라인 = 매우 큰 네트워크 지연.</p></div>
+      <div class="card accent-l r"><h3>로컬-퍼스트</h3><p>개발사가 온라인 서비스를 모두 닫아도 동작. 개방형 싱크 프로토콜로 달성(예: Git + GitHub/GitLab).</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 27 SYNC ENGINE PROS CONS -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">싱크 엔진의 장단점</div>
+      <h2 class="r">클라이언트에 영속 상태를 둔다</h2>
+      <ul class="feat r" style="margin-top:16px">
+        <li><span class="dot f ic"></span><span>로컬 데이터로 UI가 훨씬 빠르게 반응(60Hz에서 16ms 내 렌더 목표도).</span></li>
+        <li><span class="dot f ic"></span><span>오프라인 작업 가능 — 별도 오프라인 모드 불필요.</span></li>
+        <li><span class="dot f ic"></span><span>프로그래밍 모델 단순화 — 로컬 읽기·쓰기는 거의 실패하지 않아 선언적 스타일.</span></li>
+        <li><span class="dot f ic"></span><span>리액티브 모델과 결합해 타인의 편집을 실시간 반영.</span></li>
+      </ul>
+    </div>
+    <div class="r">
+      <div class="callout c"><b>한계:</b> 사용자가 필요한 데이터를 미리 다 받아 영속 저장해야 잘 동작한다. 한 사용자가 만든 파일은 괜찮지만, <b>이커머스 전체 카탈로그</b>처럼 양이 크면 부적합.</div>
+      <div class="card" style="margin-top:16px"><p>1980년대 Lotus Notes가 선구. 오늘날: 독자 백엔드(Firestore·Realm·Ditto), 오픈소스 백엔드(PouchDB/CouchDB·Automerge·Yjs). 게임의 동급 개념은 <b>넷코드(netcode)</b>.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 28 CONFLICTS INTRO -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">충돌하는 쓰기 다루기</div>
+      <h2 class="r">동시 쓰기 충돌</h2>
+      <p class="lead r" style="margin-top:14px">다중 리더의 가장 큰 문제. 사용자 1이 제목을 A→B로, 사용자 2가 A→C로 바꾸면 각자 로컬 리더엔 적용되지만, 비동기 복제 시 <b style="color:var(--conflict)">충돌이 감지</b>된다. 단일 리더에선 없는 문제다.</p>
+    </div>
+    <div class="r">
+      <div class="callout"><b>"동시(concurrent)"란?</b> 어느 쪽도 상대를 <b>인지하지 못한 채</b> 이뤄진 쓰기. 물리적으로 같은 시각인지는 중요치 않다(오프라인이면 시간차가 있을 수 있음). 핵심은 <b>한 쪽이 다른 쪽이 적용된 상태에서 일어났는가</b>이다.</div>
+      <svg viewBox="0 0 300 110" width="100%" style="margin-top:16px">
+        <rect x="10" y="30" width="80" height="36" rx="7" class="node-l"/><text x="50" y="52" text-anchor="middle" class="nsub">A → B</text>
+        <rect x="210" y="30" width="80" height="36" rx="7" class="node-l"/><text x="250" y="52" text-anchor="middle" class="nsub">A → C</text>
+        <path d="M92 48 L 208 48" class="link-flow" style="stroke:var(--conflict)"/>
+        <text x="150" y="40" text-anchor="middle" class="nsub" fill="var(--conflict)">conflict!</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 29 CONFLICT AVOIDANCE -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">충돌 해결 ① </div>
+      <h2 class="r">충돌 회피<br>(Avoidance)</h2>
+      <p class="lead r" style="margin-top:14px">애초에 충돌이 안 생기게 한다. 특정 레코드의 모든 쓰기가 <b style="color:var(--paper)">같은 리더를 거치게</b> 보장하면 충돌이 없다.</p>
+      <div class="callout f r" style="margin-top:18px">사용자가 자기 데이터만 편집하는 앱에서, 한 사용자의 요청을 항상 같은 리전으로 라우팅 → 그 사용자 관점에선 사실상 단일 리더.</div>
+    </div>
+    <div class="r">
+      <div class="card accent-c"><h3>회피의 한계</h3><p>지정 리더를 바꿔야 할 때(리전 장애·사용자 이동) 전환 중 쓰기가 일어나면 충돌이 생긴다. <b>리더 변경을 허용하면 회피는 깨진다.</b></p></div>
+      <div class="card" style="margin-top:14px"><h3>ID 생성 예</h3><p>두 리더 중 하나는 홀수, 하나는 짝수 ID만 생성 → 같은 ID 동시 할당을 막는다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 30 LWW -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">충돌 해결 ②</div>
+    <h2 class="r">최종 쓰기 승리 (LWW)</h2>
+    <div class="split" style="margin-top:18px">
+      <div class="r">
+        <p class="lead">각 쓰기에 타임스탬프를 붙여 <b style="color:var(--paper)">가장 큰(최신) 값을 채택</b>. 같으면 값을 비교(문자열은 사전순). 모든 복제본이 결국 일관된 상태가 되지만 — <b style="color:var(--conflict)">데이터 유실</b>이 대가다.</p>
+        <div class="callout c" style="margin-top:18px"><b>이름이 오해를 부른다:</b> 동시 쓰기에서 "어느 게 최신인지"는 정의되지 않으므로, 사실상 <b>무작위로 한 쓰기를 승자로 고르고 나머지를 조용히 버리는 것</b>이다.</div>
+      </div>
+      <div class="r">
+        <div class="card accent-l"><h3>안전한 경우</h3><p>유일 키로 삽입만 하고 갱신하지 않으면 LWW는 문제없다.</p></div>
+        <div class="card accent-c" style="margin-top:14px"><h3>시계 의존</h3><p>실시간 시계(Unix 타임스탬프)를 쓰면 시계가 빠른 노드의 값에 가려 나중 쓰기가 무시될 수 있다 → <b>논리 클록</b>으로 해결.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 31 MANUAL + SIBLINGS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">충돌 해결 ③</div>
+    <h2 class="r">수동 해결 & 형제(siblings)</h2>
+    <p class="lead r" style="margin-top:10px">충돌이 복제를 멈추게 할 순 없으니, DB는 동시에 쓰인 값들을 모두 저장(B와 C = <b style="color:var(--paper)">형제</b>)하고, 다음 읽기에서 모두 반환한다. 앱이 자동으로(B/C로 연결) 또는 사용자에게 물어 해결. <span class="mono" style="color:var(--muted)">예: CouchDB</span></p>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="card accent-c r"><h3><span class="dot c"></span>문제들</h3><p>API가 바뀐다(문자열 → 문자열 집합). 사용자에게 병합을 시키는 건 큰 부담. 부주의한 자동 병합은 놀라운 결과를 부른다.</p></div>
+      <div class="card accent-c r"><h3><span class="dot c"></span>아마존 장바구니 이상</h3><p>충돌을 <b>합집합</b>으로 병합 → 한 기기에서 삭제한 상품이 다른 형제에 남아있어 <b>되살아난다.</b> 기기1이 Book 삭제, 기기2가 DVD 삭제했는데 병합 후 둘 다 부활.</p></div>
+    </div>
+    <div class="callout c r" style="margin-top:18px">여러 노드가 동시에 해결하면 해결 과정 자체가 새 충돌을 만들 수 있다 — 한 노드는 B/C, 다른 노드는 C/B → 병합 시 B/C/C/B 같은 결과.</div>
+  </div>
+</section>
+
+<!-- 32 AUTO RESOLUTION -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">충돌 해결 ④</div>
+    <h2 class="r">자동 충돌 해결</h2>
+    <p class="lead r" style="margin-top:10px">동시 쓰기를 일관된 상태로 자동 병합. 같은 쓰기 집합을 처리한 모든 복제본이 <b style="color:var(--paper)">도착 순서와 무관하게</b> 같은 상태로 수렴 → 결과적 일관성 + 수렴 보장 = <b style="color:var(--flow)">강한 결과적 일관성(strong eventual consistency)</b>.</p>
+    <div class="cols c2" style="margin-top:24px">
+      <div class="r">
+        <div class="kicker">데이터 타입별 병합</div>
+        <ul class="feat">
+          <li><span class="dot f ic"></span><span><b>텍스트</b>: 삽입·삭제를 추적해 모든 변경 보존. 같은 위치 동시 삽입은 결정적으로 정렬.</span></li>
+          <li><span class="dot f ic"></span><span><b>컬렉션</b>: 장바구니 이상 회피 — Book·DVD 삭제를 추적해 결과는 {Soap}.</span></li>
+        </ul>
+      </div>
+      <div class="r">
+        <div class="kicker" style="visibility:hidden">.</div>
+        <ul class="feat">
+          <li><span class="dot f ic"></span><span><b>카운터</b>(좋아요 수): 각 형제의 증감을 세어 정확히 합산 — 중복·누락 없음.</span></li>
+          <li><span class="dot f ic"></span><span><b>키-값 맵</b>: 같은 키는 다른 알고리즘으로 병합, 다른 키는 독립 처리.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout r" style="margin-top:18px"><b>한계:</b> 리스트 5개 제한 같은 제약은 동시에 5개 초과 추가 시 일부를 버릴 수밖에 없다. 그래도 협업·로컬-퍼스트 앱에선 자동화가 최선인 경우가 많다.</div>
+  </div>
+</section>
+
+<!-- 33 CRDT OT -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">자동 병합 알고리즘</div>
+    <h2 class="r">CRDT vs OT</h2>
+    <p class="lead r" style="margin-top:8px">"ice"에 한쪽은 앞에 n("nice"), 다른 쪽은 끝에 !("ice!"). 둘 다 "nice!"로 병합 — 방식이 다르다.</p>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="card accent-b r"><span class="tag">Operational Transformation</span><h3 style="margin-top:14px">OT</h3><p>삽입/삭제 <b>인덱스</b>를 기록(n@0, !@3). 연산 교환 후, 이미 적용된 동시 연산을 고려해 인덱스를 <b>변환</b> — !는 index 4로 보정해야 nic!e 오류 회피. 주로 실시간 텍스트 협업(Google Docs).</p></div>
+      <div class="card accent-f r"><span class="tag">Conflict-free Replicated Data Type</span><h3 style="margin-top:14px">CRDT</h3><p>각 문자에 <b>불변 고유 ID</b> 부여(i=1A...). 삽입 시 새 문자 ID(4B)와 앞 문자 ID(3A)를 담아 인덱스 대신 ID로 위치 결정. 같은 위치 동시 삽입은 ID로 정렬 → <b>변환 없이</b> 수렴. 분산 DB(Redis Enterprise·Riak·Azure Cosmos DB).</p></div>
+    </div>
+    <div class="callout r" style="margin-top:18px">JSON 싱크 엔진은 CRDT(Automerge·Yjs)로도, OT(ShareDB)로도 구현 가능. 둘의 장점을 한 알고리즘에 결합하는 것도 가능.</div>
+  </div>
+</section>
+
+<!-- 34 TYPES OF CONFLICT -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">충돌의 종류</div>
+      <h2 class="r">미묘한 충돌</h2>
+      <p class="lead r" style="margin-top:14px">명백한 충돌(같은 필드를 두 값으로)도 있지만, 감지하기 어려운 것도 있다.</p>
+      <div class="card accent-c r" style="margin-top:18px"><h3>회의실 예약</h3><p>예약마다 새 레코드를 삽입하는 시스템. 같은 방·시간을 <b>두 그룹이 동시 예약</b>하면 충돌. 가용성을 미리 확인해도, 두 예약이 충분히 가까우면 둘 다 "비어있음"을 보고 삽입할 수 있다.</p></div>
+    </div>
+    <div class="r">
+      <div class="callout">즉답은 없다. 8장에서 더 많은 충돌 예를, 13장에서 복제 시스템의 충돌을 확장성 있게 <b>감지·해결</b>하는 접근을 다룬다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 35 LEADERLESS INTRO -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">리더리스 복제 · Leaderless</div>
+    <h2 class="r">리더라는 개념을 버리다</h2>
+    <p class="lead r" style="margin-top:12px">어떤 복제본이든 클라이언트의 쓰기를 직접 받는다. 초기 복제 시스템 일부가 리더리스였으나 관계형 DB 시대에 잊혔다가, 2007년 아마존의 <b style="color:var(--paper)">Dynamo</b>로 다시 유행. <span class="mono" style="color:var(--muted)">Riak · Cassandra · ScyllaDB = Dynamo 스타일</span></p>
+    <div class="cols c2 r" style="margin-top:24px">
+      <div class="callout"><b>코디네이터:</b> 클라이언트가 여러 복제본에 직접 쓰거나, 코디네이터 노드가 대신 한다. 단, 리더와 달리 <b>쓰기 순서를 강제하지 않는다</b> — 이 차이가 사용 방식에 큰 영향.</div>
+      <div class="callout f"><b>이름 주의:</b> 논문의 원조 Dynamo는 외부 공개된 적 없다. 비슷한 이름의 <b>DynamoDB</b>는 완전히 다른 아키텍처 — Multi-Paxos 기반 단일 리더 복제다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 36 WRITING NODE DOWN -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">노드가 죽었을 때 쓰기</div>
+      <h2 class="r">페일오버가 없다</h2>
+      <p class="lead r" style="margin-top:14px">모든 복제본이 동등하므로 페일오버 자체가 없다. 클라이언트가 3개 복제본에 병렬로 쓰고, <b style="color:var(--paper)">2개의 OK</b>면 성공으로 간주. 죽은 복제본이 놓친 것은 무시.</p>
+      <div class="callout f r" style="margin-top:16px">읽기도 여러 노드에 병렬로 보낸다. 어떤 노드는 최신, 어떤 노드는 stale 값을 반환할 수 있다. 모든 값에 <b>버전 번호·타임스탬프</b>를 붙이고, 클라이언트는 가장 큰 버전을 채택한다.</div>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 300 240" width="100%">
+        <rect x="100" y="14" width="100" height="34" rx="7" class="node"/><text x="150" y="36" text-anchor="middle" class="nsub">클라이언트</text>
+        <rect x="10" y="100" width="78" height="36" rx="7" class="node-f"/><text x="49" y="122" text-anchor="middle" class="nsub">복제1 OK</text>
+        <rect x="111" y="100" width="78" height="36" rx="7" class="node-f"/><text x="150" y="122" text-anchor="middle" class="nsub">복제2 OK</text>
+        <rect x="212" y="100" width="78" height="36" rx="7" class="node-c"/><text x="251" y="122" text-anchor="middle" class="nsub">복제3 ✕</text>
+        <path d="M120 48 L 55 98" class="link-flow"/>
+        <path d="M150 48 L 150 98" class="link-flow"/>
+        <path d="M180 48 L 245 98" class="link" stroke-dasharray="3 4"/>
+        <text x="150" y="180" text-anchor="middle" class="nlabel" fill="var(--flow)">2/3 성공 → 쓰기 완료</text>
+        <text x="150" y="205" text-anchor="middle" class="nsub">복귀한 복제3에서 읽으면 stale → 최신값 전달</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 37 CATCH UP -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">놓친 쓰기 따라잡기</div>
+    <h2 class="r">결국 모든 데이터가 모든 복제본에</h2>
+    <div class="cols c3" style="margin-top:26px">
+      <div class="card accent-f r"><h3><span class="dot f"></span>읽기 복구<br>(Read repair)</h3><p>병렬 읽기 중 stale 응답을 감지하면, 클라이언트가 <b>최신값을 그 복제본에 다시 써준다.</b> 자주 읽히는 값에 적합.</p></div>
+      <div class="card accent-b r"><h3><span class="dot b"></span>힌트 핸드오프<br>(Hinted handoff)</h3><p>복제본이 죽으면 다른 복제본이 대신 쓰기를 <b>힌트</b>로 저장. 복귀하면 힌트를 전달 후 삭제. 읽히지 않는 값도 따라잡게 함.</p></div>
+      <div class="card accent-l r"><h3><span class="dot l"></span>안티 엔트로피<br>(Anti-entropy)</h3><p>백그라운드 프로세스가 복제본 간 차이를 주기적으로 찾아 빠진 데이터를 복사. 순서 보장 없고 지연이 클 수 있다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 38 QUORUM -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">정족수 읽기·쓰기</div>
+      <h2 class="r">w + r &gt; n</h2>
+      <p class="lead r" style="margin-top:14px"><span class="mono">n</span> = 복제본 수, 쓰기는 <span class="mono">w</span>개의 확인 필요, 읽기는 <span class="mono">r</span>개에 질의. <b style="color:var(--paper)">w + r &gt; n</b>이면 읽기·쓰기 노드 집합이 <b>겹쳐</b> 최신값을 보장한다.</p>
+      <div class="eq r" style="margin:22px 0">n=3, w=2, r=2 → 1대 장애 허용<br><span style="color:var(--flow)">n=5, w=3, r=3 → 2대 장애 허용</span></div>
+      <p class="lead r">보통 n은 홀수(3·5), w=r=(n+1)/2. 읽기 많고 쓰기 적으면 w=n, r=1도 가능(읽기 빠름, 단 한 노드 장애로 쓰기 전부 실패).</p>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 240 240" width="100%">
+        <circle cx="120" cy="80" r="62" fill="rgba(245,166,35,.12)" stroke="var(--leader)" stroke-width="2"/>
+        <circle cx="90" cy="150" r="62" fill="rgba(45,212,191,.12)" stroke="var(--flow)" stroke-width="2"/>
+        <circle cx="150" cy="150" r="62" fill="rgba(47,111,208,.05)" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="120" y="55" text-anchor="middle" class="nlabel" fill="var(--leader)">쓰기 집합 w</text>
+        <text x="70" y="190" text-anchor="middle" class="nlabel" fill="var(--flow)">읽기 집합 r</text>
+        <text x="118" y="118" text-anchor="middle" class="nsub" fill="#fff">겹침 = 최신 보장</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 39 QUORUM LIMITS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">정족수 일관성의 한계</div>
+    <h2 class="r">w + r &gt; n 이어도 흔들리는 경우</h2>
+    <div class="cols c2" style="margin-top:20px">
+      <div class="r">
+        <ul class="feat">
+          <li><span class="dot c ic"></span><span>새 값 노드가 죽고 옛 값 복제본에서 복원되면 w 미만으로 떨어져 정족수 깨짐.</span></li>
+          <li><span class="dot c ic"></span><span>리밸런싱 중 어느 노드가 n개 복제본인지 견해가 달라 읽기·쓰기 정족수가 안 겹칠 수 있다.</span></li>
+          <li><span class="dot c ic"></span><span>읽기와 쓰기가 동시일 때 — 새 값을 볼 수도, 그 다음 읽기가 옛 값을 볼 수도.</span></li>
+        </ul>
+      </div>
+      <div class="r">
+        <ul class="feat">
+          <li><span class="dot c ic"></span><span>쓰기가 일부 성공·일부 실패해 전체 w 미만이면 롤백되지 않아, 실패 보고된 쓰기가 이후 읽기에 보일 수도.</span></li>
+          <li><span class="dot c ic"></span><span>실시간 시계로 최신 판단 시(Cassandra·ScyllaDB), 시계 빠른 노드가 덮어쓰면 쓰기가 조용히 사라질 수 있다.</span></li>
+          <li><span class="dot c ic"></span><span>두 쓰기가 동시면 복제본마다 처리 순서가 달라 충돌 발생.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout c r" style="margin-top:18px">정족수가 최신값을 보장하는 듯 보여도 실제론 단순하지 않다. Dynamo 스타일은 결과적 일관성을 견디는 용도에 최적화돼 있고, <b>w·r은 stale 확률 조절 손잡이일 뿐 절대 보장이 아니다.</b></div>
+  </div>
+</section>
+
+<!-- 40 MONITORING -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">신선도 모니터링</div>
+      <h2 class="r">"결국"을 정량화하기</h2>
+      <p class="lead r" style="margin-top:14px">stale 읽기를 견딜 수 있어도 복제 건강 상태는 알아야 한다. 크게 뒤처지면 알림으로 원인(네트워크·과부하)을 조사할 수 있어야.</p>
+    </div>
+    <div class="r">
+      <div class="card accent-l"><h3>리더 기반</h3><p>쓰기가 같은 순서로 적용되고 각 노드가 복제 로그상 위치를 가지므로, <b>리더 위치 − 팔로워 위치</b>로 복제 지연을 쉽게 측정.</p></div>
+      <div class="card accent-c" style="margin-top:14px"><h3>리더리스</h3><p>쓰기 적용에 고정 순서가 없어 모니터링이 어렵다. 힌트 핸드오프 수가 한 지표지만 해석이 까다롭다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 41 PERFORMANCE -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">단일 리더 vs 리더리스 성능</div>
+    <h2 class="r">실패와 정상을 구분하지 않는 회복탄력성</h2>
+    <div class="cols c2" style="margin-top:20px">
+      <div class="card accent-l r"><h3><span class="dot l"></span>단일 리더 — 리더에서 읽기</h3><p>최신 응답을 보장하나: 읽기 처리량이 리더 용량에 제한, 페일오버 대기, 리더 성능 문제에 매우 민감(과부하·자원 경합이 즉시 사용자에 영향).</p></div>
+      <div class="card accent-f r"><h3><span class="dot f"></span>리더리스 — 병렬 요청</h3><p>페일오버가 없고 여러 복제본에 병렬 요청 → 한 복제본이 느려도 영향 작다(빠른 응답 사용 = <b>요청 헤징</b>, 꼬리 지연 감소). <b>회색 장애</b>·과부하에 특히 강하다.</p></div>
+    </div>
+    <div class="callout c r" style="margin-top:18px"><b>리더리스의 성능 문제도 있다:</b> 죽은 복제본 감지·핸드오프가 부하 높을 때 추가 부하. 복제본·정족수가 커질수록 느린 복제본을 만날 확률 증가(보통 7중 4, 9중 5 이하). 대규모 단절 시 정족수 구성 불가 → <b>느슨한 정족수(sloppy quorum, Cassandra의 consistency level ANY)</b>로 아무 복제본이나 쓰기 허용.</div>
+  </div>
+</section>
+
+<!-- 42 MULTI REGION LEADERLESS -->
+<section class="slide">
+  <div class="split maxw">
+    <div>
+      <div class="eyebrow r">리더리스 멀티리전</div>
+      <h2 class="r">코디네이터 기반 멀티리전</h2>
+      <p class="lead r" style="margin-top:14px">Cassandra·ScyllaDB: 클라이언트가 로컬 리전 <b>코디네이터 노드</b>에 쓰면, 코디네이터가 자기 리전 모든 복제본 + <b>타 리전 복제본 1개</b>에 전달(그게 나머지로 전파) → 리전 간 요청 중복 회피.</p>
+    </div>
+    <div class="r">
+      <div class="card accent-f"><h3>일관성 수준 선택</h3><p>전 리전 정족수 / 리전별 정족수 / 로컬 리전 정족수. <b>로컬 정족수</b>는 느린 타 리전 대기를 피하지만 stale 결과 가능성↑.</p></div>
+      <div class="card" style="margin-top:14px"><p><b>Riak:</b> 클라이언트-노드 통신을 한 리전에 국한(n = 리전 내 복제본 수), 리전 간 복제는 다중 리더 스타일로 비동기.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 43 HAPPENS BEFORE -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">동시 쓰기 감지</div>
+    <h2 class="r">"happens-before" 관계</h2>
+    <p class="lead r" style="margin-top:10px">두 연산이 동시인지 어떻게 판단하나? A가 B보다 <b>먼저 일어났다(happens-before)</b> = B가 A를 알거나, A에 의존하거나, A 위에 쌓인 것. <b style="color:var(--paper)">어느 쪽도 상대보다 먼저가 아니면 동시(concurrent)</b>이다.</p>
+    <div class="cols c3" style="margin-top:24px">
+      <div class="card accent-f r"><h3>A → B</h3><p>나중 것이 먼저 것을 덮어쓴다.</p></div>
+      <div class="card accent-f r"><h3>B → A</h3><p>역시 나중 것이 승리.</p></div>
+      <div class="card accent-c r"><h3>A ∥ B</h3><p>동시 → <b>충돌</b>, 해결 필요.</p></div>
+    </div>
+    <div class="callout r" style="margin-top:20px"><b>시간·상대성:</b> 물리적으로 겹치는지는 중요치 않다. 네트워크가 느리거나 끊겨 서로 모른 채 일어났다면 — 빛의 속도로는 영향을 줄 수 있었더라도 — 두 연산은 동시다. (Lamport의 고전 논문 참조)</div>
+  </div>
+</section>
+
+<!-- 44 VERSION VECTORS -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">버전 벡터 · 장바구니 예제</div>
+    <h2 class="r">인과 의존성을 포착하기</h2>
+    <div class="split" style="margin-top:14px">
+      <div class="r">
+        <div class="kicker">단일 복제본 알고리즘</div>
+        <ul class="feat">
+          <li><span class="dot l ic"></span><span>서버가 키마다 <b>버전 번호</b>를 두고 쓰기마다 증가.</span></li>
+          <li><span class="dot l ic"></span><span>읽으면 덮이지 않은 모든 <b>형제</b> + 최신 버전 반환. 쓰기 전 반드시 읽기.</span></li>
+          <li><span class="dot l ic"></span><span>쓸 때 직전 읽기의 버전을 포함하고, 받은 값들을 병합해서 보낸다.</span></li>
+          <li><span class="dot l ic"></span><span>서버는 그 버전 이하 값은 덮고, 더 높은 버전 값은 형제로 보존.</span></li>
+        </ul>
+        <p class="lead" style="margin-top:14px;font-size:.95rem">우유→달걀→밀가루→햄→베이컨을 두 클라이언트가 번갈아 추가해도, 옛 버전은 결국 덮이고 <b style="color:var(--paper)">어떤 쓰기도 유실되지 않는다.</b></p>
+      </div>
+      <div class="r">
+        <div class="card accent-b"><h3>버전 벡터 (Version Vector)</h3><p>복제본이 여럿이면 <b>키마다 + 복제본마다</b> 버전 번호가 필요. 각 복제본이 자기 번호를 올리고 다른 복제본들에서 본 번호도 추적 — 이 묶음이 <b>버전 벡터</b>다. (Riak 2.0의 dotted version vector = "causal context")</p></div>
+        <div class="callout" style="margin-top:14px">버전 벡터 덕분에 한 복제본에서 읽고 다른 복제본에 써도 안전하다. 형제가 생길 수 있으나 올바르게 병합하면 데이터는 잃지 않는다. <span class="mono" style="color:var(--muted)">※ 버전 벡터 ≠ 벡터 클록 (미묘하게 다름; 복제본 상태 비교엔 버전 벡터가 정답)</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 45 SUMMARY -->
+<section class="slide">
+  <div class="maxw">
+    <div class="eyebrow r">6장 요약</div>
+    <h2 class="r">복제 — 한눈에</h2>
+    <div class="cols c2" style="margin-top:18px">
+      <div class="r">
+        <div class="kicker">세 가지 접근</div>
+        <ul class="feat">
+          <li><span class="dot l ic"></span><span><b>단일 리더</b> — 한 리더가 쓰기를 받아 스트림 전파. 이해 쉽고 강한 일관성. 팔로워 읽기는 stale 가능.</span></li>
+          <li><span class="dot f ic"></span><span><b>다중 리더</b> — 여러 리더가 쓰기 수용, 서로 스트림 교환. 충돌 해결 필요, 일관성 약함.</span></li>
+          <li><span class="dot b ic"></span><span><b>리더리스</b> — 여러 노드에 병렬로 쓰고 읽어 stale 노드를 감지·정정.</span></li>
+        </ul>
+        <div class="callout c" style="margin-top:16px">동기/비동기는 장애 시 동작에 큰 영향. 비동기 팔로워를 리더로 승격하면 최근 확정 데이터가 유실될 수 있다.</div>
+      </div>
+      <div class="r">
+        <div class="kicker">지연 일관성 모델</div>
+        <ul class="feat">
+          <li><span class="dot f ic"></span><span><b>읽기-후-쓰기</b> — 자기가 제출한 데이터는 항상 보인다.</span></li>
+          <li><span class="dot f ic"></span><span><b>단조 읽기</b> — 본 적 있는 데이터보다 과거로 되돌아가지 않는다.</span></li>
+          <li><span class="dot f ic"></span><span><b>일관된 접두 읽기</b> — 인과적으로 말이 되는 순서로 본다(질문→답).</span></li>
+        </ul>
+        <div class="callout f" style="margin-top:16px">다중 리더·리더리스는 <b>버전 벡터</b>로 동시 쓰기를 감지하고 <b>CRDT</b> 등 충돌 해결로 수렴시킨다. LWW·수동 해결도 가능. 다음 장: <b>샤딩</b> — 각 머신이 데이터의 일부만 저장.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="hud">
+  <div class="grp">
+    <button class="navbtn" id="prev" aria-label="이전">&#10094;</button>
+    <span class="counter" id="ctr">01 / 45</span>
+    <button class="navbtn" id="next" aria-label="다음">&#10095;</button>
+  </div>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let i=0;
+const ctr=document.getElementById('ctr');
+const prog=document.getElementById('prog');
+function pad(n){return String(n).padStart(2,'0')}
+function show(n){
+  i=Math.max(0,Math.min(slides.length-1,n));
+  slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+  ctr.textContent=pad(i+1)+' / '+pad(slides.length);
+  prog.style.width=((i+1)/slides.length*100)+'%';
+}
+document.getElementById('next').onclick=()=>show(i+1);
+document.getElementById('prev').onclick=()=>show(i-1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(i+1)}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1)}
+  if(e.key==='Home')show(0);
+  if(e.key==='End')show(slides.length-1);
+});
+let sx=null;
+document.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{
+  if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;
+  if(Math.abs(dx)>50)show(i+(dx<0?1:-1));sx=null;
+});
+// click zones (avoid hud + buttons)
+document.getElementById('deck').addEventListener('click',e=>{
+  if(e.target.closest('.hud'))return;
+  const x=e.clientX/window.innerWidth;
+  if(x>0.66)show(i+1);else if(x<0.34)show(i-1);
+});
+show(0);
+</script>
+</body>
+</html>
