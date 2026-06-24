@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8장 — 트랜잭션 (Transactions)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff;
+  --panel:#f6f8fb;
+  --panel-2:#eef2f8;
+  --ink:#16202e;
+  --muted:#5c6b80;
+  --faint:#8b97a8;
+  --line:#e1e7f0;
+  --line-strong:#cdd6e4;
+  --accent:#3a4ff0;
+  --accent-soft:#eaecff;
+  --good:#15924c;
+  --good-soft:#e4f5ec;
+  --bad:#d83a3a;
+  --bad-soft:#fbe8e8;
+  --warn:#c8780a;
+  --warn-soft:#fbf0dd;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --sans:"Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--sans);
+  background:#dfe4ec;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+/* ---------- Deck shell ---------- */
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+.slide{
+  position:absolute;
+  width:min(96vw,1280px);
+  height:min(calc(96vw*0.5625),720px);
+  background:var(--bg);
+  border-radius:14px;
+  box-shadow:0 24px 70px rgba(20,32,46,.28);
+  padding:54px 64px 60px;
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+}
+.slide.active{display:flex;animation:fade .45s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.slide.active .reveal{animation:rise .55s cubic-bezier(.2,.7,.3,1) backwards;}
+.slide.active .reveal:nth-child(1){animation-delay:.05s;}
+.slide.active .reveal:nth-child(2){animation-delay:.13s;}
+.slide.active .reveal:nth-child(3){animation-delay:.21s;}
+.slide.active .reveal:nth-child(4){animation-delay:.29s;}
+.slide.active .reveal:nth-child(5){animation-delay:.37s;}
+.slide.active .reveal:nth-child(6){animation-delay:.45s;}
+@keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+/* ---------- Typography ---------- */
+.eyebrow{
+  font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);display:flex;align-items:center;gap:10px;margin-bottom:14px;
+}
+.eyebrow .sec-num{
+  font-family:var(--mono);background:var(--accent);color:#fff;
+  border-radius:6px;padding:2px 8px;font-size:12px;letter-spacing:.04em;
+}
+h1.title{font-size:64px;font-weight:800;line-height:1.05;letter-spacing:-.02em;}
+h2{font-size:38px;font-weight:800;line-height:1.12;letter-spacing:-.015em;margin-bottom:6px;}
+h3{font-size:21px;font-weight:700;margin-bottom:8px;}
+.lead{font-size:19px;color:var(--muted);line-height:1.6;max-width:62ch;}
+p{font-size:17px;line-height:1.65;color:var(--ink);}
+.slide-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px;margin-top:10px;}
+code,.kw{font-family:var(--mono);font-size:.86em;background:var(--panel-2);
+  padding:2px 7px;border-radius:5px;color:#2a3242;border:1px solid var(--line);}
+.accent{color:var(--accent);font-weight:700;}
+strong{font-weight:700;}
+
+/* ---------- Cards / grids ---------- */
+.grid{display:grid;gap:16px;}
+.g2{grid-template-columns:1fr 1fr;}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g4{grid-template-columns:repeat(4,1fr);}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:20px 22px;display:flex;flex-direction:column;gap:8px;
+}
+.card .ic{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--accent);
+  background:var(--accent-soft);width:fit-content;padding:3px 9px;border-radius:6px;letter-spacing:.04em;}
+.card h3{font-size:18px;margin:0;}
+.card p,.card li{font-size:15px;color:var(--muted);line-height:1.55;}
+.card.good{background:var(--good-soft);border-color:#bfe6cd;}
+.card.bad{background:var(--bad-soft);border-color:#f1c5c5;}
+.card.warn{background:var(--warn-soft);border-color:#f0d9ad;}
+ul.clean{list-style:none;display:flex;flex-direction:column;gap:9px;}
+ul.clean li{position:relative;padding-left:22px;font-size:16.5px;line-height:1.55;color:var(--ink);}
+ul.clean li::before{content:"";position:absolute;left:2px;top:9px;width:8px;height:8px;
+  border-radius:2px;background:var(--accent);transform:rotate(45deg);}
+ul.clean li.b::before{background:var(--bad);}
+ul.clean li.g::before{background:var(--good);}
+ul.clean li.w::before{background:var(--warn);}
+.muted{color:var(--muted);}
+.tag{display:inline-block;font-size:13px;font-family:var(--mono);padding:3px 9px;border-radius:20px;
+  border:1px solid var(--line-strong);color:var(--muted);background:#fff;}
+.note{font-size:14.5px;color:var(--faint);border-left:3px solid var(--line-strong);
+  padding:6px 0 6px 14px;line-height:1.5;}
+.pill{font-size:13px;font-weight:700;padding:3px 11px;border-radius:20px;}
+.pill.good{background:var(--good-soft);color:var(--good);}
+.pill.bad{background:var(--bad-soft);color:var(--bad);}
+.pill.warn{background:var(--warn-soft);color:var(--warn);}
+
+/* ---------- Title slide ---------- */
+.title-slide{justify-content:center;background:
+  radial-gradient(900px 500px at 88% -10%,#eef0ff 0%,transparent 60%),
+  radial-gradient(700px 500px at -5% 110%,#eafaf0 0%,transparent 55%),#fff;}
+.title-slide .chap{font-family:var(--mono);color:var(--accent);font-weight:700;
+  letter-spacing:.2em;font-size:15px;margin-bottom:18px;}
+.title-slide .sub{margin-top:22px;font-size:21px;color:var(--muted);max-width:60ch;line-height:1.6;}
+.title-slide .meta{margin-top:40px;display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ---------- Interactive demo ---------- */
+.demo{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:18px 20px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;}
+.demo-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.demo-title{font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.02em;
+  display:flex;align-items:center;gap:8px;}
+.demo-title::before{content:"▶";color:var(--accent);font-size:11px;}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+button.btn{font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;
+  border:1px solid var(--accent);background:var(--accent);color:#fff;
+  padding:8px 16px;border-radius:8px;transition:.15s;}
+button.btn:hover{filter:brightness(1.08);transform:translateY(-1px);}
+button.btn:active{transform:none;}
+button.btn.ghost{background:#fff;color:var(--accent);}
+button.btn.ghost:hover{background:var(--accent-soft);}
+button.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:none;}
+.toggle{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#fff;}
+.toggle button{font-family:var(--sans);font-size:13.5px;font-weight:700;border:none;background:#fff;
+  color:var(--muted);padding:8px 14px;cursor:pointer;transition:.15s;}
+.toggle button.on{background:var(--accent);color:#fff;}
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+.stage svg{width:100%;height:100%;display:block;}
+.demo-status{font-size:15px;min-height:24px;line-height:1.45;color:var(--ink);font-weight:600;}
+.demo-status .ok{color:var(--good);}
+.demo-status .err{color:var(--bad);}
+.demo-status .wn{color:var(--warn);}
+
+/* SVG helpers */
+.lane-label{font:700 15px var(--sans);fill:var(--ink);}
+.axis{stroke:var(--line-strong);stroke-width:1.5;stroke-dasharray:4 5;}
+.msg{stroke:var(--ink);stroke-width:2;fill:none;opacity:0;transition:opacity .35s;}
+.msg.show{opacity:1;}
+.msg-lbl{font:600 13px var(--mono);fill:var(--ink);opacity:0;transition:opacity .35s;}
+.msg-lbl.show{opacity:1;}
+.dot{fill:var(--accent);opacity:0;transition:opacity .3s;}
+.dot.show{opacity:1;}
+.valbox{transition:.3s;}
+.code-blk{font-family:var(--mono);font-size:13.5px;line-height:1.65;background:#0f1726;color:#d6deec;
+  border-radius:10px;padding:14px 18px;overflow:auto;}
+.code-blk .c{color:#6f7d93;}
+.code-blk .k{color:#7aa2ff;}
+.code-blk .s{color:#7fd6a0;}
+
+/* ---------- Nav ---------- */
+#nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:30px;
+  padding:7px 10px;box-shadow:0 10px 30px rgba(20,32,46,.18);z-index:50;}
+#nav button{border:none;background:var(--panel-2);color:var(--ink);width:34px;height:34px;
+  border-radius:50%;cursor:pointer;font-size:16px;transition:.15s;display:grid;place-items:center;}
+#nav button:hover{background:var(--accent);color:#fff;}
+#counter{font-family:var(--mono);font-size:13px;color:var(--muted);min-width:62px;text-align:center;}
+#progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:60;transition:width .3s;}
+#secname{position:fixed;top:14px;left:22px;font-size:12px;font-family:var(--mono);
+  letter-spacing:.08em;color:#7a879b;z-index:40;text-transform:uppercase;}
+.foot{position:absolute;bottom:18px;right:30px;font-family:var(--mono);font-size:11px;color:#aeb8c6;}
+.hint{position:fixed;bottom:18px;right:22px;font-size:11.5px;color:#7a879b;z-index:40;font-family:var(--mono);}
+
+table.iso{width:100%;border-collapse:collapse;font-size:15px;}
+table.iso th,table.iso td{border:1px solid var(--line);padding:11px 10px;text-align:center;}
+table.iso th{background:var(--panel-2);font-weight:700;font-size:14px;}
+table.iso td.lv{text-align:left;font-weight:700;background:var(--panel);}
+table.iso td.p{color:var(--good);font-weight:700;}
+table.iso td.x{color:var(--bad);font-weight:700;}
+table.iso td.d{color:var(--warn);font-weight:700;}
+table.iso th.hl,table.iso td.hl{outline:3px solid var(--accent);outline-offset:-3px;background:var(--accent-soft);}
+
+@media (max-width:880px){
+  .slide{padding:30px 26px 44px;}
+  h1.title{font-size:40px;} h2{font-size:26px;} .lead{font-size:16px;}
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="secname"></div>
+<div id="deck"></div>
+<div id="nav">
+  <button id="prev" aria-label="이전">‹</button>
+  <span id="counter">1 / 1</span>
+  <button id="next" aria-label="다음">›</button>
+</div>
+<div class="hint">← → 또는 클릭으로 이동</div>
+
+<script>
+/* =====================================================================
+   INTERACTIVE DEMOS  — 각 데모는 root 컨테이너 안에 .stage / .demo-status /
+   컨트롤 버튼을 채우고, 단계별로 진행한다.
+   ===================================================================== */
+
+/* ---- 공용: 메시지 화살표 그리기 ---- */
+function arrow(x1,y1,x2,y2,cls){
+  return `<path class="msg ${cls||''}" d="M${x1},${y1} L${x2},${y2}" marker-end="url(#ah)"/>`;
+}
+function svgDefs(){
+  return `<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 Z" fill="var(--ink)"/></marker></defs>`;
+}
+
+/* ======================= 1) 카운터 경쟁 상태 (Fig 8-1) ================= */
+function demoCounter(root){
+  const steps=[
+    {t:'User 1 이 카운터를 읽습니다 → 값은 <b>42</b>',a:'r1'},
+    {t:'User 2 도 동시에 카운터를 읽습니다 → 똑같이 <b>42</b> (아직 아무도 안 바꿈)',a:'r2'},
+    {t:'User 1 계산: 42 + 1 = <b>43</b> 을 저장',a:'w1'},
+    {t:'User 2 계산: (자기가 읽은) 42 + 1 = <b>43</b> 을 저장 — User 1의 증가를 덮어씀',a:'w2'},
+    {t:'<span class="err">최종 값 = 43 ❌ &nbsp;증가가 2번 일어났는데 결과는 +1뿐. 한 번의 갱신이 사라졌습니다(lost update).</span>',a:'end'},
+  ];
+  const W=820,H=300;
+  const lanes={u1:60,db:150,u2:240};
+  const X={readA:230,readB:230,calc:430,writeA:600,writeB:600};
+  root.querySelector('.stage').innerHTML=`<svg viewBox="0 0 ${W} ${H}">${svgDefs()}
+    ${lane('User 1',lanes.u1)}${lane('Database',lanes.db)}${lane('User 2',lanes.u2)}
+    ${arrow(150,lanes.u1,X.readA,lanes.db-6,'m-r1')}
+    <text class="msg-lbl m-r1" x="158" y="${lanes.u1-8}">get counter</text>
+    ${arrow(X.readA,lanes.db,180,lanes.u1+6,'m-r1b')}
+    <text class="msg-lbl m-r1b" x="250" y="${(lanes.u1+lanes.db)/2+4}">42</text>
+
+    ${arrow(150,lanes.u2,X.readB+30,lanes.db+6,'m-r2')}
+    <text class="msg-lbl m-r2" x="158" y="${lanes.u2+18}">get counter</text>
+    ${arrow(X.readB+30,lanes.db,180,lanes.u2-6,'m-r2b')}
+    <text class="msg-lbl m-r2b" x="270" y="${(lanes.u2+lanes.db)/2}">42</text>
+
+    <text class="msg-lbl m-w1" x="395" y="${lanes.u1-8}">[42+1=43]</text>
+    ${arrow(470,lanes.u1,X.writeA,lanes.db-6,'m-w1')}
+    <text class="msg-lbl m-w1" x="470" y="${lanes.u1-8}">set = 43</text>
+
+    <text class="msg-lbl m-w2" x="395" y="${lanes.u2+18}">[42+1=43]</text>
+    ${arrow(470,lanes.u2,X.writeB,lanes.db+6,'m-w2')}
+    <text class="msg-lbl m-w2" x="470" y="${lanes.u2+18}">set = 43</text>
+
+    <g class="valbox"><rect x="700" y="${lanes.db-22}" width="78" height="44" rx="8" fill="#fff" stroke="var(--line-strong)"/>
+    <text id="cv" x="739" y="${lanes.db+7}" text-anchor="middle" style="font:700 22px var(--mono);fill:var(--bad)">42</text></g>
+  </svg>`;
+  stepper(root,steps,(i)=>{
+    show(root,'.m-r1',i>=0);show(root,'.m-r1b',i>=0);
+    show(root,'.m-r2',i>=1);show(root,'.m-r2b',i>=1);
+    show(root,'.m-w1',i>=2);show(root,'.m-w2',i>=3);
+    const cv=root.querySelector('#cv');
+    if(cv){cv.textContent=(i>=2)?'43':'42';}
+  });
+  function lane(name,y){return `<text class="lane-label" x="0" y="${y+5}">${name}</text>
+    <line class="axis" x1="100" y1="${y}" x2="${W-30}" y2="${y}"/>`;}
+}
+
+/* ======================= 2) Dirty Read (Fig 8-4) ====================== */
+function demoDirtyRead(root){
+  const steps=[
+    {t:'시작: x = 2 (커밋된 값)'},
+    {t:'User 1 이 <b>x = 3</b> 으로 변경 — 아직 <b>커밋 전</b>'},
+    {t:'User 2 가 x 를 읽음 → <span class="ok">여전히 2 ✅</span> (커밋 안 된 값은 안 보임 = dirty read 방지)'},
+    {t:'User 1 이 <b>커밋</b>'},
+    {t:'이제 User 2 가 x 를 읽음 → <span class="ok">3 ✅</span> 커밋된 뒤에야 새 값이 보입니다.'},
+  ];
+  const W=820,H=290,lanes={u1:55,db:145,u2:235};
+  root.querySelector('.stage').innerHTML=`<svg viewBox="0 0 ${W} ${H}">${svgDefs()}
+    <text class="lane-label" x="0" y="${lanes.u1+5}">User 1</text><line class="axis" x1="100" y1="${lanes.u1}" x2="790" y2="${lanes.u1}"/>
+    <text class="lane-label" x="0" y="${lanes.db+5}">Database</text><line class="axis" x1="100" y1="${lanes.db}" x2="790" y2="${lanes.db}"/>
+    <text class="lane-label" x="0" y="${lanes.u2+5}">User 2</text><line class="axis" x1="100" y1="${lanes.u2}" x2="790" y2="${lanes.u2}"/>
+    ${arrow(160,lanes.u1,250,lanes.db-6,'m-set')}<text class="msg-lbl m-set" x="150" y="${lanes.u1-8}">set x = 3</text>
+    ${arrow(330,lanes.u2,400,lanes.db+6,'m-r1')}<text class="msg-lbl m-r1" x="320" y="${lanes.u2+18}">get x</text>
+    ${arrow(400,lanes.db,470,lanes.u2-6,'m-r1b')}<text class="msg-lbl m-r1b" x="455" y="${(lanes.db+lanes.u2)/2}">2</text>
+    ${arrow(540,lanes.u1,560,lanes.db-6,'m-commit')}<text class="msg-lbl m-commit" x="520" y="${lanes.u1-8}">commit</text>
+    ${arrow(640,lanes.u2,690,lanes.db+6,'m-r2')}<text class="msg-lbl m-r2" x="630" y="${lanes.u2+18}">get x</text>
+    ${arrow(690,lanes.db,720,lanes.u2-6,'m-r2b')}<text class="msg-lbl m-r2b" x="715" y="${(lanes.db+lanes.u2)/2}">3</text>
+    <rect x="270" y="${lanes.db-50}" width="120" height="26" rx="6" class="m-set" fill="var(--warn-soft)" stroke="var(--warn)" opacity="0" style="transition:.3s"/>
+    <text class="m-set msg-lbl" x="330" y="${lanes.db-32}" text-anchor="middle" style="fill:var(--warn)">uncommitted x=3</text>
+  </svg>`;
+  stepper(root,steps,(i)=>{
+    show(root,'.m-set',i>=1);show(root,'.m-r1',i>=2);show(root,'.m-r1b',i>=2);
+    show(root,'.m-commit',i>=3);show(root,'.m-r2',i>=4);show(root,'.m-r2b',i>=4);
+  });
+}
+
+/* ======================= 3) Read Skew (Fig 8-6) ======================= */
+function demoReadSkew(root){
+  let mode='rc';
+  const W=820,H=300;
+  function render(i){
+    const a1Read=(i>=1);            // Aaliyah reads acc1
+    const transfer=(i>=2);          // transfer happens
+    const a2Read=(i>=3);            // Aaliyah reads acc2
+    // 잔액
+    let acc1 = (mode==='si') ? 500 : (a2Read?600:500);
+    let shownAcc1 = a1Read ? 500 : '—';
+    let shownAcc2 = a2Read ? ((mode==='si')?500:400) : '—';
+    const total = a2Read ? (Number(shownAcc1)+Number(shownAcc2)) : '—';
+    root.querySelector('.stage').innerHTML=`<svg viewBox="0 0 ${W} ${H}">
+      <text x="60" y="40" style="font:700 16px var(--sans);fill:var(--ink)">은행 계좌 (총 $1,000)</text>
+      <g>
+        <rect x="60" y="60" width="220" height="90" rx="12" fill="var(--panel)" stroke="var(--line-strong)"/>
+        <text x="80" y="92" style="font:600 15px var(--sans);fill:var(--muted)">계좌 1</text>
+        <text x="80" y="130" style="font:800 30px var(--mono);fill:var(--ink)">$${transfer?600:500}</text>
+        <rect x="320" y="60" width="220" height="90" rx="12" fill="var(--panel)" stroke="var(--line-strong)"/>
+        <text x="340" y="92" style="font:600 15px var(--sans);fill:var(--muted)">계좌 2</text>
+        <text x="340" y="130" style="font:800 30px var(--mono);fill:var(--ink)">$${transfer?400:500}</text>
+        ${transfer?`<text x="290" y="120" text-anchor="middle" style="font:700 26px var(--mono);fill:var(--accent)">→</text>
+          <text x="290" y="48" text-anchor="middle" style="font:600 13px var(--mono);fill:var(--accent)">$100 이체</text>`:''}
+      </g>
+      <text x="60" y="195" style="font:700 16px var(--sans);fill:var(--ink)">Aaliyah 가 화면에서 본 값</text>
+      <g>
+        <rect x="60" y="210" width="160" height="70" rx="10" fill="#fff" stroke="${a1Read?'var(--accent)':'var(--line)'}"/>
+        <text x="78" y="236" style="font:600 13px var(--sans);fill:var(--muted)">계좌 1 조회</text>
+        <text x="78" y="266" style="font:800 24px var(--mono);fill:${a1Read?'var(--ink)':'var(--faint)'}">${a1Read?'$500':'?'}</text>
+        <rect x="240" y="210" width="160" height="70" rx="10" fill="#fff" stroke="${a2Read?'var(--accent)':'var(--line)'}"/>
+        <text x="258" y="236" style="font:600 13px var(--sans);fill:var(--muted)">계좌 2 조회</text>
+        <text x="258" y="266" style="font:800 24px var(--mono);fill:${a2Read?'var(--ink)':'var(--faint)'}">${a2Read?('$'+shownAcc2):'?'}</text>
+        <rect x="430" y="210" width="200" height="70" rx="10" fill="${a2Read?(mode==='si'?'var(--good-soft)':'var(--bad-soft)'):'#fff'}" stroke="${a2Read?(mode==='si'?'var(--good)':'var(--bad)'):'var(--line)'}"/>
+        <text x="450" y="236" style="font:600 13px var(--sans);fill:var(--muted)">합계</text>
+        <text x="450" y="266" style="font:800 24px var(--mono);fill:${a2Read?(mode==='si'?'var(--good)':'var(--bad)'):'var(--faint)'}">${a2Read?('$'+total):'?'}</text>
+      </g>
+    </svg>`;
+    const st=root.querySelector('.demo-status');
+    const msgs=[
+      '시작: 두 계좌 각 $500. 한 트랜잭션이 계좌 2 → 계좌 1 로 $100 이체 중입니다.',
+      'Aaliyah 가 <b>계좌 1</b> 을 조회 → $500 (이체 도착 전).',
+      '이체가 진행됨 (계좌 2: 500→400, 계좌 1: 500→600).',
+      mode==='rc'
+        ? 'Aaliyah 가 <b>계좌 2</b> 를 조회 → $400. <span class="err">합계 $900 ❌ $100이 사라진 것처럼 보임 = read skew (비반복 읽기)</span>'
+        : 'Aaliyah 가 <b>계좌 2</b> 를 조회 → 트랜잭션 시작 시점의 일관된 스냅샷에서 $500. <span class="ok">합계 $1,000 ✅ 스냅샷 격리가 read skew를 막아줍니다.</span>'
+    ];
+    st.innerHTML=msgs[Math.min(i,3)];
+  }
+  root.querySelector('.controls').insertAdjacentHTML('afterbegin',
+    `<div class="toggle" style="margin-right:auto">
+      <button data-m="rc" class="on">Read Committed</button>
+      <button data-m="si">Snapshot Isolation</button></div>`);
+  root.querySelectorAll('.toggle button').forEach(b=>b.onclick=()=>{
+    mode=b.dataset.m;root.querySelectorAll('.toggle button').forEach(x=>x.classList.toggle('on',x===b));
+    root._reset();
+  });
+  stepper(root,[0,1,2,3],render,4);
+}
+
+/* ======================= 4) MVCC (Fig 8-7) =========================== */
+function demoMVCC(root){
+  const steps=[
+    'txid=12 트랜잭션 시작. 계좌 2 잔액을 읽으면 $500.',
+    'txid=13 이 계좌 1 에 +$100 (500→600). 갱신 = 기존 행 <b>삭제 표시 + 새 행 삽입</b>.',
+    'txid=13 이 계좌 2 에 -$100 (500→400). 마찬가지로 두 버전이 공존.',
+    'txid=12 가 다시 계좌 2 를 읽음 → <span class="ok">여전히 $500</span>. 가시성 규칙상 txid 13 의 변경은 안 보임(스냅샷 일관성).',
+  ];
+  function row(x,y,txi,txd,id,bal,active){
+    return `<g opacity="${active?1:0.18}" style="transition:.4s">
+      <rect x="${x}" y="${y}" width="150" height="80" rx="8" fill="#fff" stroke="var(--line-strong)"/>
+      <text x="${x+10}" y="${y+20}" style="font:600 12px var(--mono);fill:${txd?'var(--bad)':'var(--muted)'}">inserted_by=${txi}</text>
+      <text x="${x+10}" y="${y+38}" style="font:600 12px var(--mono);fill:${txd?'var(--bad)':'var(--muted)'}">deleted_by=${txd||'∅'}</text>
+      <text x="${x+10}" y="${y+56}" style="font:600 12px var(--mono);fill:var(--muted)">id=${id}</text>
+      <text x="${x+10}" y="${y+74}" style="font:700 14px var(--mono);fill:var(--ink)">balance=${bal}</text>
+    </g>`;
+  }
+  function render(i){
+    root.querySelector('.stage').innerHTML=`<svg viewBox="0 0 820 320">
+      <text x="20" y="30" style="font:700 14px var(--sans);fill:var(--ink)">계좌 1 행 버전</text>
+      ${row(20,45,3,'',1,'$500',true)}
+      ${i>=1?row(200,45,3,13,1,'$500',true):''}
+      ${i>=1?row(370,45,13,'',1,'$600',true):''}
+      <text x="20" y="180" style="font:700 14px var(--sans);fill:var(--ink)">계좌 2 행 버전</text>
+      ${row(20,195,5,'',2,'$500',true)}
+      ${i>=2?row(200,195,5,13,2,'$500',true):''}
+      ${i>=2?row(370,195,13,'',2,'$400',true):''}
+      <g opacity="${i>=3?1:0}" style="transition:.4s">
+        <rect x="560" y="195" width="230" height="80" rx="10" fill="var(--good-soft)" stroke="var(--good)"/>
+        <text x="575" y="225" style="font:600 13px var(--sans);fill:var(--good)">txid=12 가 읽는 값</text>
+        <text x="575" y="258" style="font:800 26px var(--mono);fill:var(--good)">$500</text>
+      </g>
+      <text x="560" y="40" style="font:600 12px var(--mono);fill:var(--bad)">빨강 = 삭제 표시(나중에 GC가 회수)</text>
+    </svg>`;
+    root.querySelector('.demo-status').innerHTML=steps[Math.min(i,3)];
+  }
+  stepper(root,[0,1,2,3],render,4);
+}
+
+/* ======================= 5) Write Skew (Fig 8-8) ===================== */
+function demoWriteSkew(root){
+  let mode='si';
+  function render(i){
+    const tA_check=(i>=1), tB_check=(i>=2), tA_write=(i>=3), tB_write=(i>=4);
+    const serializable=(mode==='ser');
+    // 직렬화면 B의 쓰기는 거부
+    const bGoesOff = tB_write && !(serializable);
+    const aOff=tA_write, bOff=bGoesOff;
+    const onCall = 2 - (aOff?1:0) - (bOff?1:0);
+    function doc(x,name,off){
+      return `<g style="transition:.4s">
+        <rect x="${x}" y="60" width="150" height="78" rx="12" fill="${off?'#f0f1f4':'var(--good-soft)'}" stroke="${off?'var(--line-strong)':'var(--good)'}"/>
+        <text x="${x+75}" y="92" text-anchor="middle" style="font:700 16px var(--sans);fill:var(--ink)">${name}</text>
+        <text x="${x+75}" y="120" text-anchor="middle" style="font:700 14px var(--sans);fill:${off?'var(--bad)':'var(--good)'}">${off?'당직 OFF':'당직 ON'}</text>
+      </g>`;
+    }
+    root.querySelector('.stage').innerHTML=`<svg viewBox="0 0 820 300">
+      <text x="60" y="40" style="font:700 16px var(--sans);fill:var(--ink)">규칙: 최소 1명은 당직이어야 함</text>
+      ${doc(60,'Aaliyah',aOff)}
+      ${doc(280,'Bryce',bOff)}
+      <g opacity="${tA_check?1:0}" style="transition:.3s"><rect x="500" y="60" width="270" height="34" rx="8" fill="#fff" stroke="var(--line)"/>
+        <text x="514" y="83" style="font:600 13px var(--mono);fill:var(--muted)">Tx A: 당직 수 = 2 ≥ 2 → 나가도 됨</text></g>
+      <g opacity="${tB_check?1:0}" style="transition:.3s"><rect x="500" y="102" width="270" height="34" rx="8" fill="#fff" stroke="var(--line)"/>
+        <text x="514" y="125" style="font:600 13px var(--mono);fill:var(--muted)">Tx B: 당직 수 = 2 ≥ 2 → 나가도 됨</text></g>
+      <rect x="60" y="180" width="710" height="80" rx="14" fill="${onCall>0?'var(--good-soft)':'var(--bad-soft)'}" stroke="${onCall>0?'var(--good)':'var(--bad)'}"/>
+      <text x="90" y="214" style="font:700 16px var(--sans);fill:var(--ink)">현재 당직 인원</text>
+      <text x="90" y="246" style="font:800 26px var(--mono);fill:${onCall>0?'var(--good)':'var(--bad)'}">${onCall} 명</text>
+      ${serializable&&tB_write?`<text x="400" y="228" style="font:700 15px var(--sans);fill:var(--good)">→ Tx B 는 직렬성 위반으로 abort, 재시도 시 당직 1명 확인 → 거부됨 ✅</text>`:''}
+    </svg>`;
+    const msgs=[
+      'Aaliyah, Bryce 둘 다 당직 중. 둘 다 몸이 안 좋아 동시에 당직 해제를 시도합니다.',
+      'Tx A: "당직 2명 이상인가?" → <b>예</b>. 스냅샷 격리라 상대의 변경이 안 보임.',
+      'Tx B: 같은 질문 → <b>예</b> (역시 2명으로 보임).',
+      'Tx A: Aaliyah 당직 해제, 커밋.',
+      mode==='si'
+        ? 'Tx B: Bryce 당직 해제, 커밋. <span class="err">당직 0명 ❌ — write skew! 두 트랜잭션이 서로 다른 행을 갱신해 충돌이 감지되지 않음.</span>'
+        : 'Tx B: 커밋 시도 → <span class="ok">직렬성 검사가 위배를 잡아 abort. 당직 최소 1명이 지켜집니다 ✅ (직렬성 격리가 필요)</span>'
+    ];
+    root.querySelector('.demo-status').innerHTML=msgs[Math.min(i,4)];
+  }
+  root.querySelector('.controls').insertAdjacentHTML('afterbegin',
+    `<div class="toggle" style="margin-right:auto">
+      <button data-m="si" class="on">Snapshot Isolation</button>
+      <button data-m="ser">Serializable</button></div>`);
+  root.querySelectorAll('.toggle button').forEach(b=>b.onclick=()=>{
+    mode=b.dataset.m;root.querySelectorAll('.toggle button').forEach(x=>x.classList.toggle('on',x===b));
+    root._reset();
+  });
+  stepper(root,[0,1,2,3,4],render,5);
+}
+
+/* ======================= 6) 2PC (Fig 8-13) =========================== */
+function demoTwoPC(root){
+  let scenario='ok';
+  function render(i){
+    const W=820,H=300,co=55,d1=150,d2=245;
+    const prepared=(i>=1), voted=(i>=2), decided=(i>=3), done=(i>=4);
+    const d2votesNo = (scenario==='abort');
+    function lane(name,y){return `<text class="lane-label" x="0" y="${y+5}">${name}</text><line class="axis" x1="120" y1="${y}" x2="800" y2="${y}"/>`;}
+    const finalCommit = !d2votesNo;
+    root.querySelector('.stage').innerHTML=`<svg viewBox="0 0 ${W} ${H}">${svgDefs()}
+      ${lane('Coordinator',co)}${lane('DB 1',d1)}${lane('DB 2',d2)}
+      <!-- phase markers -->
+      <text x="430" y="290" text-anchor="middle" style="font:600 12px var(--mono);fill:var(--muted)">Phase 1 (prepare)</text>
+      <text x="660" y="290" text-anchor="middle" style="font:600 12px var(--mono);fill:var(--muted)">Phase 2 (commit/abort)</text>
+      <line x1="350" y1="270" x2="510" y2="270" stroke="var(--line-strong)"/><line x1="560" y1="270" x2="760" y2="270" stroke="var(--line-strong)"/>
+      <!-- prepare -->
+      ${arrow(350,co,420,d1-6,'p1')}<text class="msg-lbl p1" x="350" y="${co-8}">prepare</text>
+      ${arrow(360,co,440,d2-6,'p1')}
+      <!-- votes -->
+      ${arrow(420,d1,480,co+6,'p2')}<text class="msg-lbl p2" x="455" y="${(co+d1)/2}" style="fill:var(--good)">yes</text>
+      ${arrow(440,d2,490,co+6,'p2')}<text class="msg-lbl p2" x="480" y="${(co+d2)/2}" style="fill:${d2votesNo?'var(--bad)':'var(--good)'}">${d2votesNo?'no':'yes'}</text>
+      <!-- decision marker -->
+      <g class="p3" opacity="0" style="transition:.3s"><circle cx="555" cy="${co}" r="7" fill="${finalCommit?'var(--good)':'var(--bad)'}"/>
+        <text x="555" y="${co-14}" text-anchor="middle" style="font:700 12px var(--mono);fill:${finalCommit?'var(--good)':'var(--bad)'}">${finalCommit?'COMMIT 결정':'ABORT 결정'}</text></g>
+      <!-- phase2 -->
+      ${arrow(600,co,690,d1-6,'p4')}<text class="msg-lbl p4" x="595" y="${co-8}">${finalCommit?'commit':'abort'}</text>
+      ${arrow(610,co,700,d2-6,'p4')}
+      <!-- lock bars -->
+      <rect class="p1" opacity="0" x="420" y="${d1-3}" width="280" height="6" fill="var(--warn)" style="transition:.3s"/>
+      <rect class="p1" opacity="0" x="440" y="${d2-3}" width="270" height="6" fill="var(--warn)" style="transition:.3s"/>
+      <text class="p1 msg-lbl" x="120" y="${H-6}" style="fill:var(--warn)">▬ 트랜잭션이 잡고 있는 잠금(lock)</text>
+    </svg>`;
+    show(root,'.p1',i>=1);show(root,'.p2',i>=2);show(root,'.p3',i>=3);show(root,'.p4',i>=4);
+    const msgs=[
+      '애플리케이션이 여러 DB(참여자)에 읽기/쓰기를 마치고 커밋을 요청합니다. Coordinator(조정자)가 등장.',
+      '<b>Phase 1</b>: Coordinator 가 모든 참여자에게 <b>prepare</b> 요청 — "커밋할 수 있겠어?" 참여자는 데이터를 디스크에 기록하고 잠금을 잡습니다.',
+      scenario==='ok'
+        ? '두 참여자 모두 <span class="ok">yes</span> 로 응답 (= "반드시 커밋 가능하다"는 약속, 더 이상 스스로 abort 못 함).'
+        : 'DB 1 은 yes, 하지만 <span class="err">DB 2 가 no</span> (제약 위반 등). 한 명이라도 no면 전체 abort.',
+      finalCommit
+        ? 'Coordinator 가 <b>commit</b> 으로 결정하고 그 결정을 디스크 로그에 기록 (commit point). 이 순간 이후엔 되돌릴 수 없음.'
+        : 'Coordinator 가 <b>abort</b> 로 결정하고 로그에 기록.',
+      finalCommit
+        ? '<b>Phase 2</b>: 모든 참여자에게 commit 전송 → <span class="ok">전원 커밋 ✅ 분산 원자성 달성.</span> 그 후 잠금 해제.'
+        : '<b>Phase 2</b>: 모든 참여자에게 abort 전송 → <span class="wn">전원 롤백. 부분 커밋 없이 깔끔하게 취소.</span>'
+    ];
+    root.querySelector('.demo-status').innerHTML=msgs[Math.min(i,4)];
+  }
+  root.querySelector('.controls').insertAdjacentHTML('afterbegin',
+    `<div class="toggle" style="margin-right:auto">
+      <button data-m="ok" class="on">전원 yes → commit</button>
+      <button data-m="abort">한 명 no → abort</button></div>`);
+  root.querySelectorAll('.toggle button').forEach(b=>b.onclick=()=>{
+    scenario=b.dataset.m;root.querySelectorAll('.toggle button').forEach(x=>x.classList.toggle('on',x===b));
+    root._reset();
+  });
+  stepper(root,[0,1,2,3,4],render,5);
+}
+
+/* ======================= 7) 격리 수준 요약표 (Table 8-1) ============== */
+function demoIsoTable(root){
+  const cols=['dirty','readskew','phantom','lost','writeskew'];
+  const colName={dirty:'Dirty Read',readskew:'Read Skew',phantom:'Phantom',lost:'Lost Update',writeskew:'Write Skew'};
+  // P=막음, X=발생가능, D=구현에 따라 다름
+  const data=[
+    ['Read Uncommitted','X','X','X','X','X'],
+    ['Read Committed','P','X','X','X','X'],
+    ['Snapshot Isolation','P','P','P','D','X'],
+    ['Serializable','P','P','P','P','P'],
+  ];
+  const cell=v=>v==='P'?'<td class="p">✓ 막음</td>':v==='X'?'<td class="x">✗ 발생</td>':'<td class="d">~ 구현별</td>';
+  function build(hl){
+    let h=`<table class="iso"><tr><th class="lv">격리 수준</th>`;
+    cols.forEach((c,idx)=>h+=`<th class="${hl===c?'hl':''}" data-c="${c}">${colName[c]}</th>`);
+    h+='</tr>';
+    data.forEach(r=>{
+      h+=`<tr><td class="lv">${r[0]}</td>`;
+      for(let k=0;k<5;k++){const td=cell(r[k+1]).replace('<td',`<td class="${hl===cols[k]?'hl ':''}`+(r[k+1]==='P'?'p':r[k+1]==='X'?'x':'d')+'"');h+=td;}
+      h+='</tr>';
+    });
+    h+='</table>';
+    return h;
+  }
+  const wrap=root.querySelector('.stage');
+  wrap.style.justifyContent='flex-start';
+  function paint(hl){wrap.innerHTML=build(hl);
+    wrap.querySelectorAll('th[data-c]').forEach(th=>th.style.cursor='pointer');
+    wrap.querySelectorAll('th[data-c]').forEach(th=>th.onclick=()=>{paint(th.dataset.c);
+      root.querySelector('.demo-status').innerHTML=`<b>${colName[th.dataset.c]}</b> 열을 강조했습니다 — 위 격리 수준일수록 더 많은 이상 현상을 막습니다. 다른 열의 헤더를 눌러보세요.`;});
+  }
+  paint(null);
+  root.querySelector('.demo-status').innerHTML='표의 <b>열 제목을 클릭</b>하면 해당 이상 현상을 강조합니다. ✓=막음, ✗=발생 가능, ~=구현에 따라 다름.';
+  root.querySelector('.controls').innerHTML='';
+}
+
+/* =====================================================================
+   공용 stepper: 단계 진행/초기화 컨트롤 + 슬라이드 진입 시 리셋
+   ===================================================================== */
+function show(root,sel,on){root.querySelectorAll(sel).forEach(e=>e.classList.toggle('show',on));}
+function stepper(root,steps,renderFn,explicitLen){
+  const len = explicitLen || steps.length;
+  let idx=-1;
+  const ctr=root.querySelector('.controls');
+  ctr.insertAdjacentHTML('beforeend',
+    `<button class="btn step">다음 단계 ▸</button><button class="btn ghost reset">처음으로</button>
+     <span class="stp-ind" style="font-family:var(--mono);font-size:13px;color:var(--muted)"></span>`);
+  const stepBtn=ctr.querySelector('.step'), resetBtn=ctr.querySelector('.reset'), ind=ctr.querySelector('.stp-ind');
+  function apply(){
+    if(typeof steps[0]==='object'){ // arrow-based demos with text array
+      const s=steps[Math.max(0,idx)];
+      if(renderFn)renderFn(idx);
+      root.querySelector('.demo-status').innerHTML = idx<0?'“다음 단계”를 눌러 시작하세요.':(s&&s.t?s.t:'');
+    }else{ renderFn(Math.max(0,idx)); if(idx<0)root.querySelector('.demo-status').innerHTML='“다음 단계”를 눌러 시작하세요.'; }
+    ind.textContent = `${Math.max(0,idx)+ (idx<0?0:1)} / ${len}`;
+    stepBtn.disabled = idx>=len-1;
+    stepBtn.textContent = idx>=len-1 ? '완료' : '다음 단계 ▸';
+  }
+  stepBtn.onclick=()=>{if(idx<len-1){idx++;apply();}};
+  resetBtn.onclick=()=>{idx=-1;apply();};
+  root._reset=()=>{idx=-1;apply();};
+  // initial
+  if(typeof steps[0]==='object'){renderFn&&renderFn(-1);} else {renderFn(0);}
+  root.querySelector('.demo-status').innerHTML='“다음 단계”를 눌러 시작하세요.';
+  ind.textContent=`0 / ${len}`;
+}
+
+/* DEMO 디스패치 테이블 */
+const DEMOS={counter:demoCounter,dirtyread:demoDirtyRead,readskew:demoReadSkew,
+  mvcc:demoMVCC,writeskew:demoWriteSkew,twopc:demoTwoPC,isotable:demoIsoTable};
+
+/* ===================== SLIDES 정의 + 렌더 + 네비게이션 ================= */
+/* SLIDES 배열은 다음 스크립트 블록에서 채워집니다. */
+var SLIDES=[];
+</script>
+<script id="slides-data">
+SLIDES = [
+/* ---------- 0. 표지 ---------- */
+{sec:'CHAPTER 8', cls:'title-slide', html:`
+  <div class="reveal chap">DESIGNING DATA-INTENSIVE APPLICATIONS · 제 8 장</div>
+  <h1 class="title reveal">트랜잭션<br><span style="color:var(--accent)">Transactions</span></h1>
+  <p class="sub reveal">데이터베이스가 "동시성 문제"와 "장애"를 애플리케이션 대신 처리해 주는 약속.
+  ACID의 의미부터 격리 수준, 직렬성 구현, 그리고 분산 트랜잭션(2PC)까지 — 8장 전체를 인터랙티브하게 정리했습니다.</p>
+  <div class="meta reveal">
+    <span class="tag">ACID</span><span class="tag">격리 수준</span><span class="tag">MVCC</span>
+    <span class="tag">직렬성</span><span class="tag">2단계 커밋</span><span class="tag">인터랙티브 데모 7종</span>
+  </div>`},
+
+/* ---------- 1. 목차 ---------- */
+{sec:'OVERVIEW', html:`
+  <div class="eyebrow reveal"><span class="sec-num">MAP</span>이 장의 흐름</div>
+  <h2 class="reveal">8장을 한눈에</h2>
+  <div class="slide-body">
+    <div class="grid g3 reveal" style="gap:14px">
+      <div class="card"><span class="ic">1</span><h3>트랜잭션이란?</h3><p>여러 읽기·쓰기를 하나의 논리 단위로 묶기. all-or-nothing.</p></div>
+      <div class="card"><span class="ic">2</span><h3>ACID</h3><p>원자성·일관성·격리성·지속성 — 그리고 그 안의 미묘한 함정들.</p></div>
+      <div class="card"><span class="ic">3</span><h3>약한 격리 수준</h3><p>Read Committed, 스냅샷 격리(MVCC)와 그들이 못 막는 경쟁 상태.</p></div>
+      <div class="card"><span class="ic">4</span><h3>Lost Update</h3><p>read-modify-write에서 갱신이 사라지는 문제와 5가지 해법.</p></div>
+      <div class="card"><span class="ic">5</span><h3>Write Skew & Phantom</h3><p>더 미묘한 경쟁 상태. 직렬성만이 완전히 막는다.</p></div>
+      <div class="card"><span class="ic">6</span><h3>직렬성 구현</h3><p>직렬 실행 · 2PL · 직렬성 스냅샷 격리(SSI).</p></div>
+      <div class="card" style="grid-column:span 3"><span class="ic">7</span><h3>분산 트랜잭션</h3>
+      <p>여러 노드에 걸친 원자적 커밋 — 2단계 커밋(2PC), 조정자 장애, XA, 그리고 정확히 한 번(exactly-once) 처리.</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 2. 잘못될 수 있는 일들 ---------- */
+{sec:'INTRO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">1</span>왜 트랜잭션인가</div>
+  <h2 class="reveal">데이터 시스템에서는 많은 것이 잘못될 수 있다</h2>
+  <p class="lead reveal">현실의 데이터 시스템에서는 언제든 다음과 같은 일이 일어날 수 있습니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="gap:13px">
+      <ul class="clean">
+        <li class="b">쓰기 도중에 DB 소프트웨어/하드웨어가 죽을 수 있다</li>
+        <li class="b">연산 절반쯤 진행됐는데 애플리케이션이 죽을 수 있다</li>
+        <li class="b">네트워크가 끊겨 앱-DB, 또는 노드 간 연결이 단절될 수 있다</li>
+      </ul>
+      <ul class="clean">
+        <li class="b">여러 클라이언트가 동시에 써서 서로의 변경을 덮어쓸 수 있다</li>
+        <li class="b">부분만 갱신된 말도 안 되는 데이터를 읽을 수 있다</li>
+        <li class="b">클라이언트 간 경쟁 상태(race condition)가 놀라운 버그를 만든다</li>
+      </ul>
+    </div>
+    <div class="card warn reveal"><p style="font-size:16px;color:var(--ink)"><strong>트랜잭션</strong>은 수십 년간 이 모든 문제를 단순화하는 대표적 메커니즘이었습니다.
+    실제로 영국 우체국 <em>Horizon</em> 스캔들의 기술적 원인도, 회계 시스템에 ACID 트랜잭션이 없었던 탓으로 추정됩니다.</p></div>
+  </div>`},
+
+/* ---------- 3. 트랜잭션이란 ---------- */
+{sec:'INTRO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">1</span>정의</div>
+  <h2 class="reveal">트랜잭션이란 무엇인가</h2>
+  <p class="lead reveal">애플리케이션이 여러 읽기와 쓰기를 <span class="accent">하나의 논리적 단위</span>로 묶는 방법입니다.</p>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card good"><span class="ic">COMMIT</span><h3>전체 성공</h3><p>트랜잭션 안의 모든 읽기·쓰기가 하나의 연산처럼 처리되어 확정됩니다.</p></div>
+      <div class="card bad"><span class="ic">ABORT / ROLLBACK</span><h3>전체 실패</h3><p>실패하면 전부 취소(롤백). 애플리케이션은 안전하게 재시도할 수 있습니다.</p></div>
+      <div class="card"><span class="ic">왜 좋은가</span><h3>부분 실패 걱정 제거</h3><p>일부만 성공/실패하는 곤란한 상태를 신경 쓸 필요가 없어집니다.</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li>트랜잭션은 <strong>자연 법칙이 아니라</strong> 목적을 위해 만들어진 도구입니다 — DB 접근 프로그래밍을 단순화하기 위함.</li>
+      <li>덕분에 앱은 특정 오류 시나리오와 동시성 문제를 <strong>무시</strong>할 수 있습니다(DB가 대신 처리 = 안전성 보장, safety guarantee).</li>
+      <li>모든 앱에 필요한 건 아닙니다. 성능·가용성을 위해 보장을 약화하거나 포기하는 게 이득일 때도 있습니다.</li>
+    </ul>
+    <div class="note reveal">거의 모든 관계형 DB가 트랜잭션을 지원하며, 그 방식은 1975년 IBM <span class="kw">System R</span>이 도입한 스타일을 50년째 거의 그대로 따르고 있습니다(MySQL, PostgreSQL, Oracle, SQL Server …).</div>
+  </div>`},
+
+/* ---------- 4. NoSQL/NewSQL 역사 ---------- */
+{sec:'INTRO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">1</span>역사</div>
+  <h2 class="reveal">"트랜잭션은 확장 불가능하다"는 오해</h2>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card"><span class="ic">2000년대 후반</span><h3>NoSQL의 부상</h3><p>새 데이터 모델 + 기본 제공되는 복제·샤딩. 그 과정에서 <strong>트랜잭션이 첫 희생양</strong>이 됨 — 아예 버리거나, 훨씬 약한 의미로 재정의.</p></div>
+      <div class="card"><span class="ic">유행한 믿음</span><h3>"대규모면 포기해야"</h3><p>트랜잭션은 근본적으로 확장 불가능하니, 대형 시스템은 성능·가용성을 위해 포기해야 한다는 통념이 퍼짐.</p></div>
+      <div class="card good"><span class="ic">최근</span><h3>NewSQL의 반증</h3><p>CockroachDB, TiDB, Spanner, FoundationDB, YugabyteDB가 <strong>대규모에서도 강한 ACID</strong>가 가능함을 입증(샤딩+합의 프로토콜 결합).</p></div>
+    </div>
+    <div class="card reveal"><p style="font-size:16.5px">그렇다고 <strong>모든 시스템이 트랜잭션을 써야 하는 것은 아닙니다.</strong> 다른 설계 선택처럼 트랜잭션에도 장점과 한계가 있습니다.
+    이 장의 목표는 그 보장과 비용(트레이드오프)을 정확히 이해하는 것입니다.</p></div>
+  </div>`},
+
+/* ---------- 5. ACID 개요 ---------- */
+{sec:'ACID', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>ACID</div>
+  <h2 class="reveal">ACID — 네 글자의 의미</h2>
+  <p class="lead reveal">1983년 Härder & Reuter가 만든 용어. 하지만 "ACID 준수"가 실제로 무엇을 보장하는지는 구현마다 다릅니다.</p>
+  <div class="slide-body">
+    <div class="grid g4 reveal">
+      <div class="card"><span class="ic">A</span><h3>Atomicity<br>원자성</h3><p>전부 되거나, 전부 안 되거나. 중간에 실패하면 모두 취소.</p></div>
+      <div class="card"><span class="ic">C</span><h3>Consistency<br>일관성</h3><p>앱이 정의한 불변식(invariant)이 유지됨. 사실상 앱의 책임.</p></div>
+      <div class="card"><span class="ic">I</span><h3>Isolation<br>격리성</h3><p>동시 실행되는 트랜잭션이 서로 간섭하지 않음.</p></div>
+      <div class="card"><span class="ic">D</span><h3>Durability<br>지속성</h3><p>커밋되면 데이터는 사라지지 않음(장애가 와도).</p></div>
+    </div>
+    <div class="note reveal">"ACID"는 안타깝게도 마케팅 용어가 되어버렸습니다. 반대로 <span class="kw">BASE</span>(basically available, soft state, eventual consistency)는 더 모호해서, 사실상 "ACID가 아님"이라는 뜻에 가깝습니다.</div>
+  </div>`},
+
+/* ---------- 6. Atomicity ---------- */
+{sec:'ACID', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>A — 원자성</div>
+  <h2 class="reveal">Atomicity: 전부 아니면 전무</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><h3>ACID의 원자성은 "동시성"이 아니다</h3>
+        <p>멀티스레드에서 atomic은 "다른 스레드가 중간 상태를 못 본다"는 뜻이지만, ACID에서 동시 접근 문제는 <strong>I(격리성)</strong>의 영역입니다.</p></div>
+      <div class="card"><h3>중간 장애에 대한 약속</h3>
+        <p>여러 쓰기 도중 장애(프로세스 크래시, 네트워크 단절, 디스크 풀, 제약 위반)가 나면, 트랜잭션을 <strong>abort</strong>하고 이미 한 쓰기를 모두 버립니다(undo).</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li>원자성이 없으면, 오류 시 어떤 변경이 적용됐고 안 됐는지 알기 어렵습니다.</li>
+      <li class="g">abort된 트랜잭션은 <strong>아무것도 바꾸지 않았음</strong>이 보장 → 안심하고 재시도 가능.</li>
+    </ul>
+    <div class="note reveal">저자의 농담: 사실 "원자성(atomicity)"보다 <strong>"중단 가능성(abortability)"</strong>이 더 정확한 이름이었을지도 모릅니다.</div>
+  </div>`},
+
+/* ---------- 7. Consistency ---------- */
+{sec:'ACID', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>C — 일관성</div>
+  <h2 class="reveal">Consistency: 가장 과적된(overloaded) 단어</h2>
+  <p class="lead reveal">"consistency"는 최소 5가지 다른 의미로 쓰입니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="gap:12px">
+      <ul class="clean">
+        <li>복제 일관성 / 최종 일관성 (6장)</li>
+        <li>일관된 스냅샷 (백업 시점의 단일 시점 뷰)</li>
+        <li>일관된 해싱 (샤딩/리밸런싱)</li>
+      </ul>
+      <ul class="clean">
+        <li>CAP 정리의 일관성 = 선형성(linearizability)</li>
+        <li class="w"><strong>ACID의 일관성</strong> = 앱이 정의한 "좋은 상태" (불변식)</li>
+      </ul>
+    </div>
+    <div class="card warn reveal"><h3>핵심: C는 사실상 앱의 책임</h3>
+      <p style="font-size:16px">예) 회계에서 "모든 계좌의 차변·대변 합이 항상 균형". 트랜잭션이 유효 상태에서 시작해 유효성을 보존하면 불변식이 유지됩니다.
+      외래키·고유성·체크 제약으로 일부를 DB에 선언할 수 있지만, 복잡한 불변식은 앱이 트랜잭션을 올바르게 작성해야 합니다.
+      <strong>선언하지 않은 불변식은 DB가 지켜주지 않습니다.</strong></p></div>
+  </div>`},
+
+/* ---------- 8. Isolation + 카운터 데모 ---------- */
+{sec:'ACID', demo:'counter', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>I — 격리성 · 인터랙티브</div>
+  <h2 class="reveal">Isolation: 동시성이 부르는 경쟁 상태</h2>
+  <p class="lead reveal" style="font-size:17px">두 클라이언트가 동시에 카운터를 <span class="kw">읽고 → +1 → 쓰기</span> 하면? 42→44 가 되어야 하는데 43 이 됩니다.</p>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">Figure 8-1 · 카운터 증가 경쟁 상태</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 9. Durability ---------- */
+{sec:'ACID', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>D — 지속성</div>
+  <h2 class="reveal">Durability: 커밋된 데이터는 잊히지 않는다</h2>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card"><span class="ic">단일 노드</span><h3>비휘발성 저장</h3><p>HDD/SSD에 기록. 파일 쓰기는 메모리에 버퍼링되므로, <span class="kw">fsync</span>로 디스크에 실제 기록을 보장.</p></div>
+      <div class="card"><span class="ic">크래시 복구</span><h3>WAL · 체크섬</h3><p>쓰기 전 로그(write-ahead log)로 쓰기 도중 크래시에서 복구. 체크섬으로 손상/불완전 로그를 탐지.</p></div>
+      <div class="card"><span class="ic">복제</span><h3>여러 노드로 복사</h3><p>복제 DB에서는 일정 수의 노드에 복사 완료될 때까지 기다린 뒤 "커밋 성공"을 보고.</p></div>
+    </div>
+    <div class="card warn reveal"><p style="font-size:16.5px;color:var(--ink)"><strong>완벽한 지속성은 존재하지 않습니다.</strong>
+    모든 디스크와 모든 백업이 동시에 파괴되면 DB가 할 수 있는 일은 없습니다.</p></div>
+  </div>`},
+
+/* ---------- 10. 복제와 지속성의 현실 ---------- */
+{sec:'ACID', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>D — 현실</div>
+  <h2 class="reveal">"보장"은 소금 한 꼬집과 함께</h2>
+  <p class="lead reveal">디스크 쓰기 · 원격 복제 · 백업 — 어느 하나도 완벽하지 않습니다. 그래서 <span class="accent">함께</span> 써야 합니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="gap:12px">
+      <ul class="clean">
+        <li class="b">디스크에 썼는데 머신이 죽으면, 데이터는 안 잃지만 그 머신을 고치기 전까지 <strong>접근 불가</strong></li>
+        <li class="b">정전·특정 입력 버그 같은 <strong>상관 장애</strong>는 모든 복제본을 한 번에 다운 → 메모리에만 있던 데이터 소실</li>
+        <li class="b">비동기 복제에서 리더가 죽으면 최근 쓰기 소실 가능</li>
+      </ul>
+      <ul class="clean">
+        <li class="b">전원이 끊기면 SSD가 보장을 어기기도 함 — <span class="kw">fsync</span>조차 항상 맞게 동작하진 않음</li>
+        <li class="b">펌웨어 버그(예: 정확히 32,768시간 후 드라이브 고장)</li>
+        <li class="b">조용히 진행되는 디스크 손상은 복제본·최근 백업까지 오염시킬 수 있음</li>
+        <li class="b">연구: SSD의 30~80%가 4년 내 최소 1개 배드블록 발생</li>
+      </ul>
+    </div>
+    <div class="note reveal">결론: 절대적 보장을 주는 단일 기법은 없고, <strong>위험 감소 기법들의 조합</strong>이 있을 뿐입니다.</div>
+  </div>`},
+
+/* ---------- 11. 단일/다중 객체 ---------- */
+{sec:'OBJECTS', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>단일 vs 다중 객체</div>
+  <h2 class="reveal">다중 객체 트랜잭션이 필요한 이유</h2>
+  <p class="lead reveal">예: 이메일 앱에서 "안 읽은 메일 수"를 별도 필드로 비정규화해 저장하면, 메일이 올 때 카운터도 같이 올려야 합니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card bad"><span class="ic">격리 위반 (Fig 8-2)</span><h3>Dirty Read</h3>
+        <p>메일 목록엔 새 메일이 보이는데 카운터는 아직 0 — 카운터 증가가 아직 안 일어난 부분 갱신 상태를 봄. 격리성이 있으면 둘 다 보이거나 둘 다 안 보이거나.</p></div>
+      <div class="card bad"><span class="ic">원자성 필요 (Fig 8-3)</span><h3>중간 오류</h3>
+        <p>카운터 갱신이 실패하면 메일함과 카운터가 어긋남. 원자적 트랜잭션이면 메일 삽입까지 롤백.</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li>관계형 DB는 보통 <span class="kw">BEGIN TRANSACTION</span> ~ <span class="kw">COMMIT</span> 사이를 같은 TCP 연결로 묶어 한 트랜잭션으로 인식.</li>
+      <li class="w">많은 비관계형 DB엔 이런 묶음 개념이 없음 — multi-put이 있어도 일부 키만 성공/실패할 수 있음(트랜잭션 의미 아님).</li>
+    </ul>
+  </div>`},
+
+/* ---------- 12. 단일 객체 쓰기 ---------- */
+{sec:'OBJECTS', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>단일 객체</div>
+  <h2 class="reveal">단일 객체에도 원자성·격리성이 필요하다</h2>
+  <p class="lead reveal">20KB짜리 JSON 문서 하나를 쓰는 도중이라면…</p>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card"><h3>① 절반만 전송</h3><p>10KB 전송 후 끊기면, 파싱 불가능한 JSON 조각이 저장될까?</p></div>
+      <div class="card"><h3>② 덮어쓰기 중 정전</h3><p>예전 값과 새 값이 뒤섞인 결과가 될까?</p></div>
+      <div class="card"><h3>③ 쓰는 중 읽기</h3><p>다른 클라이언트가 부분 갱신된 값을 볼까?</p></div>
+    </div>
+    <div class="card good reveal"><p style="font-size:16.5px;color:var(--ink)">그래서 스토리지 엔진은 거의 예외 없이 <strong>단일 객체 수준의 원자성·격리성</strong>을 제공합니다(로그+객체별 락).
+    더 나아가 <span class="kw">원자적 increment</span>나 <span class="kw">조건부 쓰기(CAS)</span> 같은 연산도 제공 — read-modify-write 사이클을 없애줍니다.</p></div>
+    <div class="note reveal">다만 이것들은 보통 의미의 "트랜잭션"은 아닙니다(여러 객체 간 보장 없음). 예: Cassandra/ScyllaDB의 경량 트랜잭션은 단일 객체에 대한 선형성 읽기·조건부 쓰기만 제공.</div>
+  </div>`},
+
+/* ---------- 13. 다중 객체 필요성 + 오류 처리 ---------- */
+{sec:'OBJECTS', html:`
+  <div class="eyebrow reveal"><span class="sec-num">2</span>필요성 · 오류 처리</div>
+  <h2 class="reveal">언제 다중 객체가 필요하고, abort는 어떻게 다루나</h2>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card"><span class="ic">외래키</span><h3>참조 무결성</h3><p>서로 참조하는 레코드들을 같이 삽입할 때 키가 올바르게 유지돼야 함.</p></div>
+      <div class="card"><span class="ic">비정규화</span><h3>중복 데이터 동기화</h3><p>document DB에서 비정규화된 정보를 여러 문서에 걸쳐 갱신할 때.</p></div>
+      <div class="card"><span class="ic">보조 인덱스</span><h3>인덱스 갱신</h3><p>값이 바뀌면 인덱스도 갱신 — 격리성이 없으면 한 인덱스엔 있고 다른 덴 없을 수 있음.</p></div>
+    </div>
+    <div class="card warn reveal"><h3>재시도(retry)는 단순하지만 완벽하진 않다</h3>
+      <ul class="clean" style="margin-top:6px">
+        <li class="w">커밋은 성공했는데 응답이 네트워크에서 유실 → 재시도 시 <strong>두 번 수행</strong> (앱 레벨 중복 제거 필요)</li>
+        <li class="w">과부하/경합이 원인이면 재시도가 상황을 <strong>악화</strong> → 재시도 횟수 제한 + 지수 백오프</li>
+        <li class="w">일시적 오류(데드락 등)만 재시도 의미 있음. 영구 오류(제약 위반)는 재시도 무의미</li>
+        <li class="w">DB 밖 부작용(이메일 발송 등)은 abort돼도 일어날 수 있음 → 2PC 필요할 수도</li>
+      </ul></div>
+  </div>`},
+
+/* ---------- 14. 약한 격리 개요 ---------- */
+{sec:'WEAK ISO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>약한 격리 수준</div>
+  <h2 class="reveal">왜 약한 격리를 쓰는가</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><h3>완벽한 직렬성은 비싸다</h3>
+        <p>직렬성(serializability)은 "동시성이 없는 것처럼" 보장하지만 성능 비용이 큼. 그래서 많은 DB가 <strong>더 약한 격리</strong>를 기본으로 씁니다.</p></div>
+      <div class="card bad"><h3>동시성 버그는 잡기 어렵다</h3>
+        <p>타이밍이 안 맞을 때만 드물게 발생 → 재현·테스트 어려움. 게다가 큰 앱에선 누가 동시에 같은 데이터를 건드리는지 알기 힘듦.</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li class="b">단순한 이론 문제가 아닙니다 — 비트코인 거래소 파산, 회계 감사 착수, 고객 데이터 손상 등 <strong>실제 큰 손실</strong>을 냈습니다.</li>
+      <li class="b">공격자가 일부러 동시 요청을 폭주시켜 동시성 버그를 노릴 수도 있습니다 → 체계적 예방 필요.</li>
+      <li>이제부터 실무에서 쓰이는 약한(비직렬) 격리 수준과, 각 수준이 막거나 못 막는 경쟁 상태를 살펴봅니다.</li>
+    </ul>
+  </div>`},
+
+/* ---------- 15. Read Committed 정의 ---------- */
+{sec:'WEAK ISO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>Read Committed</div>
+  <h2 class="reveal">가장 기본: Read Committed</h2>
+  <p class="lead reveal">두 가지를 보장합니다. (Oracle·PostgreSQL·SQL Server 등 다수의 기본값)</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card good"><span class="ic">읽기</span><h3>No Dirty Read</h3><p>커밋된 데이터만 읽는다. 커밋되지 않은 다른 트랜잭션의 쓰기는 보이지 않음.</p></div>
+      <div class="card good"><span class="ic">쓰기</span><h3>No Dirty Write</h3><p>커밋된 데이터만 덮어쓴다. 커밋되지 않은 값 위에 덮어쓰지 않음.</p></div>
+    </div>
+    <div class="grid g2 reveal" style="gap:12px">
+      <ul class="clean">
+        <li>Dirty Read 방지 이유 ① 부분 갱신(일부 행만 보임)으로 인한 혼란·오판 방지</li>
+        <li>방지 이유 ② abort되어 롤백될 데이터를 읽으면 <strong>연쇄 abort(cascading abort)</strong> 위험</li>
+      </ul>
+      <ul class="clean">
+        <li>Dirty Write 방지: 두 트랜잭션의 쓰기가 뒤섞이는 걸 막음(예: 중고차 — 차는 Bryce가, 청구서는 Aaliyah에게 가는 사고 방지)</li>
+        <li class="w">단, 두 카운터 증가(Fig 8-1) 같은 <strong>Lost Update는 막지 못함</strong></li>
+      </ul>
+    </div>
+  </div>`},
+
+/* ---------- 16. Dirty Read 데모 ---------- */
+{sec:'WEAK ISO', demo:'dirtyread', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>Read Committed · 인터랙티브</div>
+  <h2 class="reveal">No Dirty Read 동작 보기</h2>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">Figure 8-4 · User 2는 커밋 후에만 새 값을 본다</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 17. Read Committed 구현 ---------- */
+{sec:'WEAK ISO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>구현</div>
+  <h2 class="reveal">Read Committed는 어떻게 구현되나</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><span class="ic">Dirty Write 방지</span><h3>행 수준 락(row lock)</h3>
+        <p>수정하려는 행에 락을 잡고 커밋/abort까지 보유. 한 행에 한 트랜잭션만 락 가능 — 다른 쪽은 대기.</p></div>
+      <div class="card"><span class="ic">Dirty Read 방지</span><h3>옛 값/새 값 둘 다 보관</h3>
+        <p>읽기 락은 비효율적(긴 쓰기 1개가 많은 읽기를 막음). 그래서 보통 <strong>커밋된 옛 값</strong>을 함께 보관해, 진행 중 읽기에는 옛 값을 돌려줌.</p></div>
+    </div>
+    <div class="card warn reveal"><h3>더 약한 수준: Read Uncommitted</h3>
+      <p style="font-size:16px">Dirty Write는 막지만 Dirty Read는 막지 않음 — 즉 커밋 전 최신 값을 바로 반환. 두 버전을 저장할 필요가 없어 성능은 좋지만 부분 갱신 노출 위험.</p></div>
+    <div class="note reveal">읽기 락으로 dirty read를 막는 DB도 있음(IBM Db2, SQL Server의 <span class="kw">read_committed_snapshot=off</span>).</div>
+  </div>`},
+
+/* ---------- 18. Snapshot Isolation: Read Skew 데모 ---------- */
+{sec:'WEAK ISO', demo:'readskew', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>스냅샷 격리 · 인터랙티브</div>
+  <h2 class="reveal">Read Committed로는 부족하다 — Read Skew</h2>
+  <p class="lead reveal" style="font-size:16px">토글로 두 격리 수준을 비교해 보세요. 같은 시나리오에서 합계가 $900(이상) vs $1,000(정상)으로 갈립니다.</p>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">Figure 8-6 · 사라진 $100 (비반복 읽기)</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 19. Snapshot Isolation 개념 ---------- */
+{sec:'WEAK ISO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>스냅샷 격리</div>
+  <h2 class="reveal">Snapshot Isolation: 일관된 스냅샷에서 읽기</h2>
+  <p class="lead reveal">각 트랜잭션은 <span class="accent">시작 시점에 커밋돼 있던</span> 일관된 스냅샷을 읽습니다. 이후 다른 트랜잭션이 바꿔도, 그 시점의 옛 데이터만 봅니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card good"><h3>긴 읽기에 축복</h3><p>백업·분석처럼 오래 걸리는 읽기 전용 쿼리에 이상적. 데이터가 변하는 와중에도 "한 시점에 얼어붙은" 일관된 뷰를 봄.</p></div>
+      <div class="card"><h3>Read Skew가 치명적인 곳</h3><p>① 백업(복원 시 불일치가 영구화) ② 대규모 분석·무결성 검사(다른 시점의 조각들을 보면 결과가 무의미).</p></div>
+    </div>
+    <div class="note reveal">PostgreSQL, MySQL(InnoDB), Oracle, SQL Server 등 다수 지원. Oracle·TiDB·Aurora DSQL은 이를 <strong>최고 격리 수준</strong>으로 채택. BigQuery 같은 데이터 웨어하우스도 분석을 위해 사용.</div>
+  </div>`},
+
+/* ---------- 20. MVCC 데모 ---------- */
+{sec:'WEAK ISO', demo:'mvcc', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>MVCC · 인터랙티브</div>
+  <h2 class="reveal">스냅샷 격리의 구현 — 다중 버전 동시성 제어</h2>
+  <p class="lead reveal" style="font-size:16px">갱신 = "옛 행 삭제 표시 + 새 행 삽입". 각 행은 <span class="kw">inserted_by</span>·<span class="kw">deleted_by</span>(txid)를 가집니다.</p>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">Figure 8-7 · 여러 버전이 나란히 보관된다</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 21. 가시성 규칙 ---------- */
+{sec:'WEAK ISO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>가시성 규칙</div>
+  <h2 class="reveal">어떤 버전을 볼 수 있는가 (Visibility Rules)</h2>
+  <p class="lead reveal">트랜잭션 ID를 비교해 "보이는 버전"을 결정 → 일관된 스냅샷을 제공합니다.</p>
+  <div class="slide-body">
+    <ol class="clean reveal" style="counter-reset:n">
+      <li>시작 시점에 <strong>진행 중이던</strong> 트랜잭션들의 쓰기는 무시(나중에 커밋돼도).</li>
+      <li>더 <strong>나중의</strong> txid가 만든 쓰기는 무시(커밋 여부 무관).</li>
+      <li><strong>abort된</strong> 트랜잭션의 쓰기는 항상 무시 → abort 시 즉시 삭제 불필요(GC가 나중에 정리).</li>
+      <li class="g">그 외 모든 쓰기는 보임.</li>
+    </ol>
+    <div class="card reveal"><h3>한 줄 요약: 행이 보이려면</h3>
+      <ul class="clean" style="margin-top:6px">
+        <li>읽기 시작 시점에 그 행을 <strong>삽입한 트랜잭션이 이미 커밋</strong>돼 있어야 하고,</li>
+        <li>삭제 표시가 없거나, 있어도 <strong>삭제 요청 트랜잭션이 아직 커밋 안 됐어야</strong> 한다.</li>
+      </ul></div>
+    <div class="note reveal">값을 제자리에서 바꾸지 않고 매번 새 버전을 삽입하므로, 작은 오버헤드로 일관된 스냅샷을 제공할 수 있습니다.</div>
+  </div>`},
+
+/* ---------- 22. 인덱스 + 이름 혼란 ---------- */
+{sec:'WEAK ISO', html:`
+  <div class="eyebrow reveal"><span class="sec-num">3</span>인덱스 · 이름 혼란</div>
+  <h2 class="reveal">인덱스 처리와 "Repeatable Read"라는 혼란</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><h3>다중 버전 + 인덱스</h3>
+        <p>인덱스 엔트리가 행의 한 버전을 가리키고, 쿼리는 버전을 따라가며 "보이는 + 조건 일치" 행을 찾음.
+        대안: CouchDB·Datomic·LMDB는 <strong>불변(copy-on-write) B-tree</strong> — 쓰기마다 새 루트 = 그 시점의 스냅샷.</p></div>
+      <div class="card warn"><h3>이름이 제각각</h3>
+        <p>같은 "스냅샷 격리"를 PostgreSQL은 <span class="kw">repeatable read</span>, Oracle은 <span class="kw">serializable</span>이라 부름.
+        반대로 MySQL의 repeatable read는 더 약하고, Db2의 repeatable read는 직렬성을 뜻함.</p></div>
+    </div>
+    <div class="note reveal">근본 원인: SQL 표준이 1975년 System R 정의에 기반해 만들어졌는데, 스냅샷 격리는 그 뒤에 발명됐기 때문. 표준의 격리 수준 정의 자체가 모호해 "repeatable read가 정확히 뭔지 아무도 모른다"는 상황.</div>
+  </div>`},
+
+/* ---------- 23. Lost Update 문제 ---------- */
+{sec:'LOST UPDATE', html:`
+  <div class="eyebrow reveal"><span class="sec-num">4</span>Lost Update</div>
+  <h2 class="reveal">갱신이 사라진다 — Lost Update</h2>
+  <p class="lead reveal">앱이 값을 <span class="kw">읽고 → 수정 → 다시 쓰기</span>(read-modify-write). 두 트랜잭션이 동시에 하면 한쪽 수정이 사라집니다(나중 쓰기가 앞 쓰기를 뭉갬).</p>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card"><h3>카운터/잔액</h3><p>현재 값 읽고, 새 값 계산하고, 다시 쓰기.</p></div>
+      <div class="card"><h3>복잡한 값의 부분 수정</h3><p>JSON 문서를 파싱→리스트에 항목 추가→다시 쓰기.</p></div>
+      <div class="card"><h3>위키 동시 편집</h3><p>두 사용자가 전체 페이지를 각자 저장 → 한쪽 변경분 소실.</p></div>
+    </div>
+    <div class="card reveal"><p style="font-size:16.5px">너무 흔한 문제라 다양한 해법이 개발됐습니다. 다음 슬라이드에서 5가지를 봅니다:
+    <span class="tag">원자적 쓰기</span> <span class="tag">명시적 잠금</span> <span class="tag">자동 감지</span> <span class="tag">조건부 쓰기(CAS)</span> <span class="tag">충돌 해소(복제)</span></p></div>
+  </div>`},
+
+/* ---------- 24. Lost Update 해법 1-2 ---------- */
+{sec:'LOST UPDATE', html:`
+  <div class="eyebrow reveal"><span class="sec-num">4</span>해법 ①②</div>
+  <h2 class="reveal">원자적 쓰기 · 명시적 잠금</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="align-items:start;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card good"><span class="ic">①</span><h3>원자적 쓰기 연산</h3><p>가능하면 최선의 해법. read-modify-write를 앱 코드에서 없앰.</p></div>
+        <div class="code-blk"><span class="c">-- 대부분의 관계형 DB에서 동시성 안전</span>
+<span class="k">UPDATE</span> counters <span class="k">SET</span> value = value + 1
+  <span class="k">WHERE</span> key = <span class="s">'foo'</span>;</div>
+        <p class="muted" style="font-size:14px">MongoDB·Redis도 부분 수정·자료구조용 원자 연산 제공. 단, 위키 같은 임의 텍스트 편집엔 부적합. ORM이 무심코 안전하지 않은 read-modify-write를 만들기 쉬움.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card"><span class="ic">②</span><h3>명시적 잠금</h3><p>갱신할 객체를 앱이 직접 잠금. 게임처럼 규칙 검증이 DB 쿼리로 표현 안 될 때 유용.</p></div>
+        <div class="code-blk"><span class="k">BEGIN TRANSACTION</span>;
+<span class="k">SELECT</span> * <span class="k">FROM</span> figures
+  <span class="k">WHERE</span> name=<span class="s">'robot'</span> <span class="k">AND</span> game_id=222
+  <span class="k">FOR UPDATE</span>;  <span class="c">-- 반환된 행을 잠금</span>
+<span class="k">UPDATE</span> figures <span class="k">SET</span> position=<span class="s">'c4'</span> <span class="k">WHERE</span> id=1234;
+<span class="k">COMMIT</span>;</div>
+        <p class="muted" style="font-size:14px">주의: 잠금 추가를 잊으면 경쟁 상태. 여러 객체 잠금은 <strong>데드락</strong> 위험(DB가 자동 감지해 한쪽 abort → 앱이 재시도).</p>
+      </div>
+    </div>
+  </div>`},
+
+/* ---------- 25. Lost Update 해법 3-4 ---------- */
+{sec:'LOST UPDATE', html:`
+  <div class="eyebrow reveal"><span class="sec-num">4</span>해법 ③④</div>
+  <h2 class="reveal">자동 감지 · 조건부 쓰기(CAS)</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="align-items:start;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card good"><span class="ic">③</span><h3>Lost Update 자동 감지</h3>
+          <p>병렬 실행을 허용하되, 트랜잭션 관리자가 lost update를 감지하면 abort시키고 재시도하게 함. 스냅샷 격리와 함께 효율적으로 동작.</p></div>
+        <ul class="clean">
+          <li class="g">PostgreSQL(repeatable read)·Oracle(serializable)·SQL Server(snapshot)는 자동 감지</li>
+          <li class="b">MySQL/InnoDB(repeatable read)는 <strong>감지 안 함</strong> → 이 정의상 스냅샷 격리를 제공 안 함</li>
+          <li class="g">장점: 특별한 DB 기능을 앱이 안 써도 됨 → 실수 덜함</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card"><span class="ic">④</span><h3>조건부 쓰기 (Compare-and-Set)</h3>
+          <p>마지막으로 읽은 뒤 값이 안 바뀐 경우에만 갱신. CPU의 원자적 CAS와 같은 발상. 안 맞으면 효과 없음 → 재시도.</p></div>
+        <div class="code-blk"><span class="k">UPDATE</span> wiki_pages <span class="k">SET</span> content=<span class="s">'new'</span>
+  <span class="k">WHERE</span> id=1234 <span class="k">AND</span> content=<span class="s">'old'</span>;</div>
+        <p class="muted" style="font-size:14px">버전 번호 컬럼을 증가시키는 방식도 흔함(= <strong>낙관적 잠금</strong>). 단, MVCC 가시성 규칙과의 상호작용에 주의(보통 WHERE 평가엔 예외 적용).</p>
+      </div>
+    </div>
+  </div>`},
+
+/* ---------- 26. 해법 5: 복제 충돌 해소 ---------- */
+{sec:'LOST UPDATE', html:`
+  <div class="eyebrow reveal"><span class="sec-num">4</span>해법 ⑤</div>
+  <h2 class="reveal">복제 환경의 충돌 해소</h2>
+  <p class="lead reveal">다중 리더·리더리스 복제는 단일 최신 복사본을 보장하지 못함 → 락·조건부 쓰기 기법이 통하지 않습니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card good"><h3>충돌 버전을 모아 병합</h3>
+        <p>동시 쓰기가 여러 충돌 버전(siblings)을 만들게 하고, 앱 코드나 특수 자료구조로 사후 병합.
+        연산이 <strong>교환 가능(commutative)</strong>하면(카운터 증가, 집합에 원소 추가 등) lost update를 막을 수 있음 → CRDT의 발상.</p></div>
+      <div class="card bad"><h3>주의할 점</h3>
+        <p>조건부 쓰기처럼 교환 불가능한 연산도 있음. 또 많은 복제 DB의 기본값인 <span class="kw">LWW(Last Write Wins)</span> 충돌 해소는 <strong>lost update에 취약</strong>(동시 쓰기 중 하나를 버림).</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 27. Write Skew 데모 ---------- */
+{sec:'WRITE SKEW', demo:'writeskew', html:`
+  <div class="eyebrow reveal"><span class="sec-num">5</span>Write Skew · 인터랙티브</div>
+  <h2 class="reveal">더 미묘한 경쟁 상태 — Write Skew</h2>
+  <p class="lead reveal" style="font-size:16px">두 의사가 동시에 당직 해제. 각자 "2명 이상이니 OK"라 판단 → 결국 0명. 토글로 직렬성과 비교하세요.</p>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">Figure 8-8 · 당직 의사 최소 1명 규칙이 깨진다</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 28. Write Skew 특성화 ---------- */
+{sec:'WRITE SKEW', html:`
+  <div class="eyebrow reveal"><span class="sec-num">5</span>특성화</div>
+  <h2 class="reveal">Write Skew의 정체와 막기 어려운 이유</h2>
+  <div class="slide-body">
+    <div class="card reveal"><p style="font-size:16.5px"><strong>Write skew = lost update의 일반화.</strong>
+    두 트랜잭션이 <strong>같은 객체들을 읽고</strong>, 각자 <strong>서로 다른 객체를 갱신</strong>할 때 발생.
+    (같은 객체를 갱신하면 dirty write나 lost update가 됨.)</p></div>
+    <h3 class="reveal">해법이 더 제한적입니다</h3>
+    <ul class="clean reveal">
+      <li class="b">원자적 단일 객체 연산 — 도움 안 됨(여러 객체 관여)</li>
+      <li class="b">lost update 자동 감지 — 도움 안 됨(PostgreSQL·MySQL·Oracle·SQL Server의 해당 수준 모두 write skew 자동 감지 못 함)</li>
+      <li class="w">제약(constraint) — 여러 객체에 걸친 제약은 대부분 DB가 미지원(트리거·구체화 뷰로 흉내낼 수도)</li>
+      <li class="g">차선책: 트랜잭션이 의존하는 행을 <span class="kw">SELECT ... FOR UPDATE</span>로 명시적 잠금</li>
+      <li class="g">근본 해결: <strong>진짜 직렬성(serializable) 격리</strong></li>
+    </ul>
+  </div>`},
+
+/* ---------- 29. Write Skew 더 많은 예시 ---------- */
+{sec:'WRITE SKEW', html:`
+  <div class="eyebrow reveal"><span class="sec-num">5</span>사례</div>
+  <h2 class="reveal">알고 나면 곳곳에 보이는 Write Skew</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="gap:14px">
+      <div class="card"><span class="ic">회의실 예약</span><h3>이중 예약</h3><p>겹치는 예약을 먼저 확인하고 없으면 삽입 — 스냅샷 격리에선 동시 삽입을 못 막음. 직렬성 필요.</p></div>
+      <div class="card"><span class="ic">멀티플레이어 게임</span><h3>규칙 위반 이동</h3><p>락으로 같은 말은 못 움직이게 해도, 서로 다른 말을 같은 칸으로 옮기는 건 못 막음.</p></div>
+      <div class="card good"><span class="ic">사용자명 선점</span><h3>중복 가입</h3><p>여기선 <strong>고유성 제약</strong>이 간단한 해법(나중 트랜잭션이 제약 위반으로 abort).</p></div>
+      <div class="card"><span class="ic">이중 지불 방지</span><h3>잔액 초과</h3><p>두 지출이 동시에 삽입돼 합계가 음수가 되는데, 서로를 못 알아챔.</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 30. Phantom & Materializing ---------- */
+{sec:'WRITE SKEW', html:`
+  <div class="eyebrow reveal"><span class="sec-num">5</span>Phantom</div>
+  <h2 class="reveal">Phantom(유령) — 없던 행이 끼어든다</h2>
+  <p class="lead reveal">앞 예시들은 공통 패턴을 따릅니다.</p>
+  <div class="slide-body">
+    <div class="grid g3 reveal">
+      <div class="card"><span class="ic">1</span><h3>조건 검색</h3><p>SELECT로 어떤 조건을 만족하는 행을 찾아 요구사항 확인.</p></div>
+      <div class="card"><span class="ic">2</span><h3>결정</h3><p>그 결과에 따라 진행할지 오류낼지 결정.</p></div>
+      <div class="card"><span class="ic">3</span><h3>쓰기</h3><p>INSERT/UPDATE/DELETE로 결과를 바꾸고 커밋.</p></div>
+    </div>
+    <div class="card warn reveal"><p style="font-size:16px">3단계의 쓰기가 2단계 결정의 <strong>전제(조건 검색 결과)를 바꿉니다.</strong>
+    한 트랜잭션의 쓰기가 다른 트랜잭션의 검색 결과를 바꾸는 이 효과를 <strong>phantom</strong>이라 합니다.
+    "행의 부재"를 확인하고 행을 추가하는 경우엔 <span class="kw">SELECT FOR UPDATE</span>로 잠글 대상이 없어 까다롭습니다.</p></div>
+    <div class="card reveal"><h3>Materializing Conflicts (충돌 구체화)</h3>
+      <p style="font-size:15.5px">잠글 행이 없으면, 인위적으로 잠금용 행을 만들어 둠(예: 모든 방×시간대 조합 행을 미리 생성해 거기에 락).
+      하지만 어렵고 오류 나기 쉽고, 동시성 제어가 데이터 모델로 새어나와 보기 흉함 → <strong>최후의 수단</strong>. 대개는 직렬성 격리가 낫다.</p></div>
+  </div>`},
+
+/* ---------- 31. Serializability 개요 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>직렬성</div>
+  <h2 class="reveal">Serializability — 가장 강한 격리</h2>
+  <p class="lead reveal">동시에 실행돼도 <span class="accent">한 번에 하나씩 직렬로 실행한 것과 동일한 결과</span>를 보장 → 모든 경쟁 상태를 막습니다.</p>
+  <div class="slide-body">
+    <div class="card reveal"><p style="font-size:16px;color:var(--ink)">그렇게 좋은데 왜 다들 안 쓸까? → <strong>구현 방식과 성능</strong> 때문. 오늘날 직렬성을 제공하는 DB는 보통 다음 세 기법 중 하나를 씁니다.</p></div>
+    <div class="grid g3 reveal">
+      <div class="card"><span class="ic">A</span><h3>실제 직렬 실행</h3><p>단일 스레드에서 한 번에 하나씩 진짜로 직렬 실행.</p></div>
+      <div class="card"><span class="ic">B</span><h3>2단계 잠금 (2PL)</h3><p>수십 년간 유일한 실용적 방법이었던 비관적 잠금.</p></div>
+      <div class="card"><span class="ic">C</span><h3>직렬성 스냅샷 격리 (SSI)</h3><p>낙관적 동시성 제어 — 비교적 새로운 방법.</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 32. Actual Serial Execution ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>A · 직렬 실행</div>
+  <h2 class="reveal">아예 동시성을 없앤다 — Actual Serial Execution</h2>
+  <p class="lead reveal">단일 스레드에서 한 번에 하나씩 실행 → 충돌 감지·예방이 필요 없어 정의상 직렬성. 2000년대에 와서야 현실성이 생겼습니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><span class="ic">변화 ①</span><h3>RAM이 싸졌다</h3><p>활성 데이터셋을 통째로 메모리에 둘 수 있게 됨 → 디스크 대기 없이 매우 빠른 실행.</p></div>
+      <div class="card"><span class="ic">변화 ②</span><h3>OLTP는 짧다</h3><p>실무 트랜잭션은 보통 읽기·쓰기 수가 적고 짧음. 긴 분석 쿼리는 스냅샷 격리로 별도 처리.</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li>VoltDB/H-Store, Redis, Datomic 등이 직렬 실행 채택.</li>
+      <li class="g">잠금 조율 오버헤드가 없어 더 빠를 수도 있지만, 처리량은 <strong>단일 CPU 코어</strong>로 제한됨.</li>
+    </ul>
+  </div>`},
+
+/* ---------- 33. 저장 프로시저 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>A · 저장 프로시저</div>
+  <h2 class="reveal">대화형 트랜잭션 대신 저장 프로시저로</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card bad"><h3>대화형(interactive) 트랜잭션의 문제</h3>
+        <p>앱↔DB가 한 문장씩 주고받음 → 네트워크 왕복에 시간 허비. 직렬 실행이면 DB가 다음 쿼리를 기다리느라 처리량 붕괴.</p></div>
+      <div class="card good"><h3>저장 프로시저(stored procedure)</h3>
+        <p>트랜잭션 코드 전체를 DB에 미리 제출. 데이터가 메모리에 있으면 네트워크·디스크 대기 없이 아주 빠르게 실행(Fig 8-9).</p></div>
+    </div>
+    <div class="card reveal"><h3>장단점</h3>
+      <div class="grid g2" style="gap:14px;margin-top:6px">
+        <ul class="clean">
+          <li class="b">옛 전용 언어(PL/SQL, T-SQL …)는 못생기고 라이브러리 생태계 빈약</li>
+          <li class="b">DB 내 코드는 디버그·버전관리·배포·모니터링이 까다로움</li>
+          <li class="b">잘못 짠 프로시저가 공유 DB 전체에 큰 피해. 멀티테넌트면 보안 위험</li>
+        </ul>
+        <ul class="clean">
+          <li class="g">현대 구현은 범용 언어 사용(VoltDB: Java/Groovy, Datomic: Java/Clojure, Redis: Lua, MongoDB: JS)</li>
+          <li class="g">VoltDB는 복제에도 활용 — 각 복제본에서 같은 프로시저 실행(<strong>상태 기계 복제</strong>). 단, <strong>결정론적</strong>이어야 함</li>
+        </ul>
+      </div></div>
+  </div>`},
+
+/* ---------- 34. 샤딩 + 직렬 실행 요약 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>A · 샤딩 · 요약</div>
+  <h2 class="reveal">샤딩으로 확장, 그리고 직렬 실행의 조건</h2>
+  <div class="slide-body">
+    <div class="card reveal"><h3>샤딩(sharding)</h3>
+      <p style="font-size:16px">각 트랜잭션이 <strong>단일 샤드</strong> 안에서만 읽고 쓰도록 데이터를 나누면, 샤드마다 독립 스레드 → CPU 코어 수에 선형 확장.
+      하지만 여러 샤드에 걸친 트랜잭션은 모든 샤드를 lockstep으로 조율해야 해 훨씬 느림(VoltDB: 교차 샤드 쓰기 ~1,000/초).</p></div>
+    <h3 class="reveal">직렬 실행이 통하는 조건</h3>
+    <ul class="clean reveal">
+      <li class="w">모든 트랜잭션이 작고 빨라야 함 — 느린 것 하나가 전체를 멈춤</li>
+      <li class="w">활성 데이터셋이 메모리에 들어가야 적합</li>
+      <li class="w">쓰기 처리량이 단일 코어로 감당 가능하거나, 교차 샤드 조율 없이 샤딩 가능해야 함</li>
+    </ul>
+  </div>`},
+
+/* ---------- 35. 2PL 개념 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>B · 2PL</div>
+  <h2 class="reveal">Two-Phase Locking (2PL)</h2>
+  <p class="lead reveal">약 30년간 직렬성의 표준이었던 방법. <span class="warn">⚠ 분산 원자 커밋인 2PC와는 완전히 다른 것</span>입니다.</p>
+  <div class="slide-body">
+    <div class="card reveal"><p style="font-size:16.5px">단순 락이 dirty write만 막는 것과 달리, 2PL은 락 요구가 훨씬 강합니다.
+    여러 트랜잭션이 동시에 <strong>읽기</strong>는 가능하지만, 누군가 <strong>쓰기</strong>를 하려면 배타적 접근이 필요합니다.</p></div>
+    <div class="grid g2 reveal">
+      <div class="card"><h3>읽고 있는데 쓰려 하면</h3><p>A가 객체를 읽었고 B가 쓰려 하면, B는 A가 끝날(커밋/abort) 때까지 대기.</p></div>
+      <div class="card"><h3>썼는데 읽으려 하면</h3><p>A가 객체를 썼고 B가 읽으려 하면, B는 A가 끝날 때까지 대기(옛 버전 읽기 불가).</p></div>
+    </div>
+    <div class="note reveal">즉 2PL에서는 <strong>쓰는 쪽이 읽는 쪽도 막고, 그 반대도 성립</strong>. 스냅샷 격리의 "읽기는 쓰기를, 쓰기는 읽기를 막지 않는다"와 정반대 — 그 대신 모든 경쟁 상태를 막습니다.</div>
+  </div>`},
+
+/* ---------- 36. 2PL 구현 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>B · 구현</div>
+  <h2 class="reveal">2PL의 락과 두 단계</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><span class="ic">공유 모드 (읽기)</span><h3>Shared Lock</h3><p>여러 트랜잭션이 동시에 보유 가능. 단, 누군가 배타 락을 가지면 대기.</p></div>
+      <div class="card"><span class="ic">배타 모드 (쓰기)</span><h3>Exclusive Lock</h3><p>한 트랜잭션만 보유. 기존 락이 있으면 대기. 읽고 쓰면 공유→배타로 업그레이드.</p></div>
+    </div>
+    <div class="card reveal"><h3>왜 "두 단계(two-phase)"인가</h3>
+      <p style="font-size:16px"><strong>성장 단계</strong>(실행 중 락 획득) → <strong>수축 단계</strong>(종료 시 모든 락 해제). 두 단계는 겹치면 안 됨 — 락을 한 번 풀면 새 락을 못 잡음.</p></div>
+    <div class="note reveal">락이 워낙 많아 <strong>데드락</strong>이 쉽게 발생 → DB가 자동 감지해 한쪽을 abort, 앱이 재시도. 2PL은 MySQL/InnoDB·SQL Server의 serializable, Db2의 repeatable read에서 사용.</div>
+  </div>`},
+
+/* ---------- 37. 2PL 성능 + predicate/index-range ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>B · 성능 · 잠금 범위</div>
+  <h2 class="reveal">2PL의 성능 문제와 Phantom 대응</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card bad"><h3>성능이 큰 단점</h3>
+        <p>락 획득/해제 오버헤드보다 <strong>동시성 감소</strong>가 더 큰 문제. 경합 시 처리량·응답시간 악화, 높은 백분위에서 매우 느림. 데드락 빈발 → 재시도로 작업 낭비.</p></div>
+      <div class="card"><h3>Predicate Lock</h3>
+        <p>특정 객체가 아니라 <strong>검색 조건에 맞는 모든 객체</strong>(아직 없는 행 포함)에 거는 잠금 → phantom 방지. 하지만 활성 락이 많으면 매칭 검사가 느림.</p></div>
+    </div>
+    <div class="card good reveal"><h3>Index-Range Lock (next-key locking)</h3>
+      <p style="font-size:16px">predicate를 더 넓은 범위로 근사(예: "방 123, 12~13시" → "방 123 전체" 또는 "모든 방, 12~13시")해서 <strong>인덱스 엔트리/범위</strong>에 잠금.
+      정밀하진 않아도 오버헤드가 훨씬 낮아 실용적인 타협. 적당한 인덱스가 없으면 테이블 전체 공유 락으로 폴백(안전하지만 느림).</p></div>
+  </div>`},
+
+/* ---------- 38. SSI + 비관/낙관 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>C · SSI</div>
+  <h2 class="reveal">Serializable Snapshot Isolation (SSI)</h2>
+  <p class="lead reveal">2008년 등장. 스냅샷 격리 대비 <span class="accent">작은 성능 손해</span>로 완전한 직렬성을 제공하는 낙관적 기법입니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><span class="ic">비관적 (Pessimistic)</span><h3>2PL · 직렬 실행</h3><p>"문제 날 수도 있으면 일단 기다린다." 상호 배제처럼 안전해질 때까지 차단.</p></div>
+      <div class="card good"><span class="ic">낙관적 (Optimistic)</span><h3>SSI</h3><p>"잘 되겠지" 하고 진행. 커밋 시점에 격리가 깨졌는지 검사 → 깨졌으면 abort·재시도. 직렬 실행된 것만 커밋 허용.</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li class="b">경합이 높으면 abort 비율↑ → 성능 나빠짐(최대 처리량 근처면 재시도 부하가 악화)</li>
+      <li class="g">여유 용량이 있고 경합이 낮으면 비관적 방식보다 보통 더 빠름</li>
+      <li>단일 노드(PostgreSQL serializable, SQL Server Hekaton, HyPer)와 분산(CockroachDB, FoundationDB) 모두에서 사용</li>
+    </ul>
+  </div>`},
+
+/* ---------- 39. SSI 동작 ---------- */
+{sec:'SERIAL', html:`
+  <div class="eyebrow reveal"><span class="sec-num">6</span>C · 동작</div>
+  <h2 class="reveal">SSI는 "낡은 전제"를 어떻게 잡아내나</h2>
+  <p class="lead reveal">트랜잭션은 어떤 <span class="accent">전제</span>("지금 당직 2명")를 보고 결정·쓰기를 합니다. 커밋 시점에 그 전제가 깨졌을 수 있으니, DB가 두 경우를 감지합니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><span class="ic">Fig 8-10</span><h3>① 낡은 MVCC 읽기 감지</h3>
+        <p>읽을 때 무시했던(미커밋) 다른 트랜잭션의 쓰기가, 커밋 시점엔 이미 커밋됐는지 확인. 그렇다면 전제가 깨진 것 → abort.
+        <br><span class="muted" style="font-size:14px">왜 즉시 abort 안 하나? 읽기 전용이면 abort 불필요하고, 상대가 abort할 수도 있어 불필요한 abort를 피함.</span></p></div>
+      <div class="card"><span class="ic">Fig 8-11</span><h3>② 이전 읽기에 영향 주는 쓰기 감지</h3>
+        <p>읽은 데이터(인덱스 범위)에 표시를 남겨 둠. 누가 그 데이터를 쓰면 <strong>tripwire(차단 아님, 통지)</strong>로 "네가 읽은 게 낡았다"고 알림.
+        충돌한 쓰기가 먼저 커밋되면, 뒤 트랜잭션은 커밋 시 abort.</p></div>
+    </div>
+    <div class="card good reveal"><h3>성능 특징</h3>
+      <p style="font-size:15.5px">2PL과 달리 <strong>락 대기로 차단하지 않음</strong> → 지연시간이 예측 가능. 직렬 실행과 달리 단일 코어에 묶이지 않음(FoundationDB는 충돌 감지를 여러 머신에 분산).
+      추적 정밀도는 트레이드오프(정밀↔오버헤드). 긴 읽기-쓰기 트랜잭션은 abort 위험 → 짧게 유지해야 함(긴 읽기 전용은 OK).</p></div>
+  </div>`},
+/* ---------- 40. 분산 트랜잭션 개요 ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>분산 트랜잭션</div>
+  <h2 class="reveal">여러 노드에 걸친 트랜잭션</h2>
+  <p class="lead reveal">하나의 트랜잭션이 <span class="accent">여러 노드</span>에 닿아야 할 때가 있습니다 — 샤딩된 DB의 여러 샤드, 다른 노드에 있는 전역 보조 인덱스 등. 이를 <span class="kw">분산 트랜잭션</span>이라 합니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card good"><span class="ic">단일 노드</span><h3>원자성은 쉽다</h3>
+        <p>스토리지 엔진이 처리. 데이터를 디스크(WAL)에 쓰고 <strong>커밋 레코드</strong>를 로그에 덧붙임. 크래시 시 커밋 레코드가 디스크에 있으면 커밋, 없으면 롤백.
+        <br>→ <strong>단 하나의 장치</strong>(디스크 컨트롤러)가 커밋을 원자적으로 만든다.</p></div>
+      <div class="card bad"><span class="ic">분산</span><h3>원자성이 새로운 난제</h3>
+        <p>동시성 제어(직렬 실행·2PL·SSI)는 분산에서도 비슷하게 동작. 하지만 <strong>"커밋됐는가?"</strong>를 판단하는 것 자체가 어려움.
+        <br>모든 노드에 커밋 요청을 보내고 각자 커밋하게 두면 — 일부는 성공, 일부는 실패할 수 있다.</p></div>
+    </div>
+    <div class="note reveal">이 장의 나머지는 바로 이 <strong>분산 원자성</strong> 문제에 집중합니다.</div>
+  </div>`},
+
+/* ---------- 41. 원자적 커밋 문제 (Fig 8-12) ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>Fig 8-12 · 원자적 커밋 문제</div>
+  <h2 class="reveal">일부는 커밋, 일부는 실패하면?</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="gap:13px">
+      <ul class="clean">
+        <li class="b">어떤 노드는 제약 위반/충돌을 감지해 <strong>abort</strong>, 다른 노드는 <strong>commit</strong> 성공</li>
+        <li class="b">일부 커밋 요청이 네트워크에서 유실 → 타임아웃으로 abort, 다른 요청은 도착해 커밋</li>
+        <li class="b">일부 노드가 커밋 레코드를 다 쓰기 전에 크래시 → 복구 시 롤백, 다른 노드는 커밋</li>
+      </ul>
+      <div class="card bad"><h3>왜 치명적인가</h3>
+        <p>한 번 커밋된 데이터는 <strong>되돌릴 수 없다</strong>. read-committed 이상에서는 다른 트랜잭션이 이미 그 값을 읽어버렸기 때문.
+        <br>user 1이 "DB1 커밋 실패"를 알아챘을 땐, 이미 user 2가 DB2에서 그 데이터를 읽은 뒤일 수 있다 → 연쇄적으로 되돌려야 하는 악몽.</p></div>
+    </div>
+    <div class="card good reveal"><h3>해법의 목표 — 원자적 커밋(atomic commitment)</h3>
+      <p style="font-size:16.5px;color:var(--ink)">참여 노드들이 <strong>전원 커밋 또는 전원 abort</strong> 중 하나로 합의하게 만들고, 둘이 섞이는 일을 막는다.</p></div>
+  </div>`},
+
+/* ---------- 42. 2PC 인터랙티브 ---------- */
+{sec:'DISTRIBUTED', demo:'twopc', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>2단계 커밋 · 인터랙티브</div>
+  <h2 class="reveal">Two-Phase Commit (2PC)</h2>
+  <p class="lead reveal" style="font-size:17px">여러 노드에 걸쳐 원자적 커밋을 달성하는 고전 알고리즘. 커밋을 <span class="kw">prepare</span>(투표)와 <span class="kw">commit/abort</span>(결정) <span class="accent">두 단계</span>로 나눕니다.</p>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">Figure 8-13 · 2PC의 성공 실행 (시나리오를 바꿔보세요)</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 43. 약속의 시스템 ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>왜 작동하는가</div>
+  <h2 class="reveal">2PC는 "약속의 시스템"이다</h2>
+  <p class="lead reveal">prepare·commit 요청도 유실될 수 있는데 왜 2PC는 원자성을 보장할까? 핵심은 <span class="accent">두 개의 "되돌릴 수 없는 지점"</span>에 있습니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card"><span class="ic">① 참여자의 약속</span><h3>"yes" = 커밋 포기 불가</h3>
+        <p>prepare를 받은 참여자는 <strong>어떤 상황에서도 커밋 가능</strong>함을 확인(데이터를 디스크에 기록, 제약/충돌 검사). yes라고 답하는 순간 — 스스로 abort할 권리를 <strong>포기</strong>한다. (단, 조정자는 아직 abort 가능)</p></div>
+      <div class="card"><span class="ic">② 조정자의 약속</span><h3>결정은 번복 불가</h3>
+        <p>조정자가 모든 응답을 받고 commit/abort를 <strong>결정해 디스크 로그에 기록</strong> = <span class="kw">commit point</span>. 이후엔 요청이 실패해도 <strong>성공할 때까지 영원히 재시도</strong>. 되돌아가지 않는다.</p></div>
+    </div>
+    <div class="card good reveal"><h3>결혼식 비유 💍</h3>
+      <p style="font-size:16px">"동의합니까?"에 "네"라고 답하기 전엔 거부할 수 있지만, <strong>"네"라고 말한 뒤엔 철회 불가</strong>. 주례가 선언하는 걸 못 들어도(기절해도) 결혼은 성립 — 깨어나서 전역 트랜잭션 ID로 상태를 물어보면 된다.</p></div>
+  </div>`},
+
+/* ---------- 44. 조정자 장애 / in-doubt ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>Fig 8-14 · 조정자 장애</div>
+  <h2 class="reveal">조정자가 죽으면? — in-doubt</h2>
+  <p class="lead reveal">참여자가 yes로 투표한 <span class="accent">뒤에</span> 조정자가 죽으면, 참여자는 commit인지 abort인지 들을 수 없습니다. 이 상태가 <span class="kw">in doubt(의심 상태)</span>입니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card bad"><h3>혼자 결정할 수 없다</h3>
+        <p>예: 조정자가 commit으로 결정 → DB2엔 commit 도착, DB1엔 보내기 전 크래시. DB1은 막막함.
+        <br>· 타임아웃 후 혼자 <strong>abort</strong> → DB2(커밋함)와 불일치
+        <br>· 혼자 <strong>commit</strong> → 다른 참여자가 abort했을 수도
+        <br>→ 안전한 선택지가 없다. <strong>조정자 복구를 기다리는 수밖에.</strong></p></div>
+      <div class="card"><h3>그래서 로그가 필수</h3>
+        <p>조정자는 commit/abort 결정을 <strong>요청 전송 전에 디스크 로그</strong>에 기록. 복구 시 로그를 읽어 in-doubt 트랜잭션의 운명을 결정(로그에 commit 레코드 없으면 abort). 결국 2PC의 commit point = <strong>조정자에서의 단일 노드 원자 커밋</strong>.</p></div>
+    </div>
+    <div class="card warn reveal"><h3>3PC와 비차단(nonblocking)</h3>
+      <p style="font-size:15.5px">2PC는 조정자 복구를 기다리며 멈출 수 있어 <strong>blocking</strong> 프로토콜. <strong>3PC</strong>는 비차단을 노리지만, 네트워크 지연·프로세스 정지가 무한한 현실에서는 원자성을 보장하지 못함. 실전 해법은 조정자를 <strong>내결함성 합의 프로토콜</strong>로 대체하는 것(10장).</p></div>
+  </div>`},
+
+/* ---------- 45. 이종 분산 트랜잭션 & exactly-once & XA ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>현실의 분산 트랜잭션</div>
+  <h2 class="reveal">두 종류의 분산 트랜잭션</h2>
+  <p class="lead reveal">2PC는 평판이 엇갈립니다 — 강력한 안전성 보장 vs 운영 문제·성능 저하. 먼저 <span class="accent">"분산 트랜잭션"의 두 의미</span>를 구분해야 합니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card good"><span class="ic">DB 내부</span><h3>같은 SW 노드 간</h3>
+        <p>한 DB의 샤드/복제본끼리. CockroachDB·TiDB·Spanner·FoundationDB·YugabyteDB, Kafka 등. 다른 시스템과 호환할 필요가 없어 <strong>더 좋은 프로토콜·최적화</strong> 자유 → 잘 동작.</p></div>
+      <div class="card warn"><span class="ic">이종(heterogeneous)</span><h3>서로 다른 기술 간</h3>
+        <p>다른 벤더의 두 DB, 또는 DB가 아닌 시스템(메시지 브로커)까지. 내부가 전혀 달라도 원자적 커밋을 보장해야 함 → <strong>훨씬 어렵다.</strong></p></div>
+    </div>
+    <div class="grid g2 reveal" style="gap:13px">
+      <div class="card"><span class="ic">활용</span><h3>exactly-once 메시지 처리</h3>
+        <p>메시지 처리(DB 쓰기)와 <strong>메시지 ACK</strong>를 한 트랜잭션으로 원자적 커밋 → 성공해야만 ACK, 실패 시 둘 다 롤백되어 안전하게 재전송. 정확히 한 번 처리.</p></div>
+      <div class="card"><span class="ic">표준</span><h3>XA 트랜잭션</h3>
+        <p>이종 기술 간 2PC 표준(1991~). 네트워크 프로토콜이 아니라 <strong>트랜잭션 조정자와 통신하는 C API</strong>. PostgreSQL·MySQL·Oracle·Db2·SQL Server, ActiveMQ·IBM MQ 등이 지원(Java는 JTA).</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 46. XA 문제점 / in-doubt 잠금 ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>XA의 어두운 면</div>
+  <h2 class="reveal">in-doubt가 위험한 이유 — 잠금</h2>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card bad"><span class="ic">잠금 보유</span><h3>in-doubt 동안 락을 놓지 못한다</h3>
+        <p>트랜잭션은 수정 행에 배타 락(2PL 직렬성이면 읽은 행에 공유 락도) 보유. 커밋/abort 전엔 <strong>해제 불가</strong>.
+        조정자가 20분 뒤 복구되면 락도 20분 유지. 로그가 유실되면 <strong>영원히</strong> — 관리자가 손으로 풀 때까지. 그 사이 다른 트랜잭션은 그 데이터에 접근 못 해 <strong>앱의 큰 부분이 마비</strong>될 수 있다.</p></div>
+      <div class="card warn"><span class="ic">복구</span><h3>고아 in-doubt & 휴리스틱 결정</h3>
+        <p>로그 손상 등으로 <strong>고아 in-doubt</strong> 트랜잭션이 발생하면 자동 복구 불가 — 재부팅해도 락은 유지(원자성 보장 때문). 관리자가 수동 판정.
+        <br>많은 XA 구현의 비상 탈출구 <span class="kw">휴리스틱 결정</span> = 참여자가 독단으로 commit/abort. 사실상 <strong>"원자성을 깰 수도 있음"의 완곡어</strong>. 재난 상황 전용.</p></div>
+    </div>
+    <ul class="clean reveal">
+      <li class="b">단일 노드 조정자 = <strong>단일 장애점</strong>. 조정자 로그가 DB만큼 중요한 상태가 됨</li>
+      <li class="b">조정자를 복제해도 — 조정자·참여자가 직접 통신 못 하고 <strong>앱 코드</strong>를 거쳐야 해 앱이 단일 장애점</li>
+      <li class="b">최소 공통분모(lowest common denominator): 시스템 간 <strong>데드락 감지 불가</strong>, <strong>SSI와 미호환</strong></li>
+    </ul>
+  </div>`},
+
+/* ---------- 47. DB 내부 분산 트랜잭션 ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>NewSQL의 해법</div>
+  <h2 class="reveal">DB 내부 분산 트랜잭션은 왜 잘 되나</h2>
+  <p class="lead reveal">CockroachDB·TiDB·Spanner·FoundationDB·YugabyteDB 등은 여러 샤드 쓰기에 <span class="accent">2PC를 쓰면서도</span> XA의 문제를 겪지 않습니다. 다른 기술과 인터페이스할 필요가 없어 <span class="accent">더 나은 프로토콜</span>을 자유롭게 쓰기 때문.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal">
+      <div class="card good"><h3>XA의 큰 문제들을 이렇게 고친다</h3>
+        <ul class="clean" style="margin-top:6px">
+          <li class="g">조정자를 <strong>복제</strong> + 장애 시 자동 페일오버</li>
+          <li class="g">조정자와 데이터 샤드가 <strong>앱 코드 없이 직접 통신</strong></li>
+          <li class="g">참여 샤드를 <strong>복제</strong>해 결함으로 인한 abort 위험 감소</li>
+          <li class="g">원자 커밋을 <strong>분산 동시성 제어</strong>(데드락 감지·일관 읽기)와 결합</li>
+        </ul></div>
+      <div class="card"><h3>합의 알고리즘으로</h3>
+        <p>조정자와 샤드 복제에 보통 <strong>합의(consensus) 알고리즘</strong> 사용(10장). 사람 개입 없이 노드 간 자동 페일오버하면서 강한 일관성 유지.
+        <br>샤드 간 격리 수준으로 <strong>스냅샷 격리</strong>와 <strong>SSI</strong> 모두 가능.</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 48. exactly-once 다시 보기 (멱등성) ---------- */
+{sec:'DISTRIBUTED', html:`
+  <div class="eyebrow reveal"><span class="sec-num">7</span>다시 보는 exactly-once</div>
+  <h2 class="reveal">분산 트랜잭션 없이도 "정확히 한 번"</h2>
+  <p class="lead reveal">사실 exactly-once를 위해 브로커-DB 간 원자 커밋이 <span class="accent">꼭 필요하진 않습니다.</span> DB 내부 트랜잭션 + <span class="kw">멱등성(idempotence)</span>으로 충분합니다.</p>
+  <div class="slide-body">
+    <div class="grid g2 reveal" style="gap:14px;align-items:start">
+      <div>
+        <div class="code-blk reveal">
+<span class="c">// 메시지마다 고유 ID. 처리된 ID를 저장하는 테이블 보유</span>
+BEGIN TRANSACTION;
+<span class="c">// ① 이미 처리된 메시지인가?</span>
+<span class="k">if</span> exists(processed_ids, msg.id):
+    ack(msg); drop(); <span class="c">// 중복 → ACK하고 버림</span>
+<span class="k">else</span>:
+    insert(processed_ids, msg.id); <span class="c">// ② ID 기록</span>
+    process(msg);  <span class="c">// 같은 트랜잭션 내 DB 쓰기</span>
+COMMIT;            <span class="c">// ③ 커밋 성공 후에야</span>
+ack(msg);          <span class="c">//    브로커에 ACK</span>
+<span class="c">// ④ ACK 후 별도 트랜잭션으로 ID 삭제(선택)</span>
+        </div>
+      </div>
+      <div class="card good"><h3>크래시가 나도 안전</h3>
+        <ul class="clean" style="margin-top:6px">
+          <li class="g">커밋 전 크래시 → 트랜잭션 abort, 브로커가 <strong>재전송</strong></li>
+          <li class="g">커밋 후·ACK 전 크래시 → 재처리해도 <strong>ID가 이미 있어 버림</strong></li>
+          <li class="g">ACK 후·ID 삭제 전 크래시 → 낡은 ID만 남음(무해)</li>
+          <li class="g">동시 중복 삽입은 <strong>ID 유일성 제약</strong>이 차단</li>
+        </ul>
+        <p style="margin-top:8px">ID 기록이 처리를 <strong>멱등</strong>하게 만들어, 부작용 중복 없이 안전하게 재시도 가능. (Kafka Streams도 유사 방식)</p></div>
+    </div>
+  </div>`},
+
+/* ---------- 49. 요약 표 (Table 8-1, 인터랙티브) ---------- */
+{sec:'SUMMARY', demo:'isotable', html:`
+  <div class="eyebrow reveal"><span class="sec-num">∑</span>Table 8-1 · 정리</div>
+  <h2 class="reveal">격리 수준 × 이상 현상</h2>
+  <p class="lead reveal" style="font-size:17px">강한 격리 수준일수록 더 많은 경쟁 상태를 막습니다. <span class="accent">완전한 보호는 Serializable뿐.</span> 열 제목을 눌러 비교해보세요.</p>
+  <div class="demo reveal">
+    <div class="demo-head"><span class="demo-title">격리 수준이 막아주는 이상 현상</span><div class="controls"></div></div>
+    <div class="stage"></div>
+    <div class="demo-status"></div>
+  </div>`},
+
+/* ---------- 50. 마무리 ---------- */
+{sec:'SUMMARY', html:`
+  <div class="eyebrow reveal"><span class="sec-num">∑</span>마무리</div>
+  <h2 class="reveal">트랜잭션이 우리에게 주는 것</h2>
+  <p class="lead reveal">트랜잭션은 <span class="accent">"어떤 동시성 문제와 어떤 장애는 존재하지 않는 척"</span> 할 수 있게 해주는 추상화 계층입니다. 수많은 오류가 단순한 "abort 후 재시도"로 환원됩니다.</p>
+  <div class="slide-body">
+    <div class="grid g3 reveal" style="gap:13px">
+      <div class="card"><span class="ic">이상 현상</span><h3>우리가 본 것들</h3>
+        <p style="font-size:14.5px">dirty read/write, read skew(반복 불가 읽기), phantom, lost update, write skew. 각각을 막는 격리 수준이 다르다.</p></div>
+      <div class="card"><span class="ic">직렬성 3가지</span><h3>구현 방법</h3>
+        <p style="font-size:14.5px"><strong>직렬 실행</strong>(빠른 트랜잭션·스토어드 프로시저·샤딩) · <strong>2PL</strong>(오랜 표준, 성능 약점) · <strong>SSI</strong>(낙관적, 비차단).</p></div>
+      <div class="card"><span class="ic">분산</span><h3>2PC와 그 너머</h3>
+        <p style="font-size:14.5px">같은 DB 내부면 2PC가 잘 동작. 이종(XA)이면 조정자·앱 코드 결함에 취약. <strong>멱등성</strong>으로 원자 커밋 없이 exactly-once 달성 가능.</p></div>
+    </div>
+    <div class="card good reveal"><p style="font-size:16.5px;color:var(--ink)">단순한 접근 패턴(단일 레코드 읽기/쓰기)은 트랜잭션 없이도 되지만, <strong>복잡한 접근 패턴</strong>에서는 트랜잭션이 생각해야 할 오류 경우의 수를 극적으로 줄여줍니다. 관계형이든 아니든, <strong>데이터 모델과 무관하게 가치 있는 기능</strong>입니다.</p></div>
+    <p class="reveal" style="text-align:center;margin-top:14px;font-family:var(--mono);font-size:14px;color:var(--muted)">— 8장 트랜잭션 끝 · Designing Data-Intensive Applications, 2판 —</p>
+  </div>`},
+];
+</script>
+<script id="deck-runtime">
+(function(){
+  const deck = document.getElementById('deck');
+  const elPrev = document.getElementById('prev');
+  const elNext = document.getElementById('next');
+  const elCounter = document.getElementById('counter');
+  const elProgress = document.getElementById('progress');
+  const elSecname = document.getElementById('secname');
+  let cur = 0;
+  const inited = [];
+
+  // build slide DOM
+  SLIDES.forEach((s, i) => {
+    const sec = document.createElement('section');
+    sec.className = 'slide' + (s.cls ? ' ' + s.cls : '');
+    sec.dataset.idx = i;
+    sec.innerHTML = s.html;
+    deck.appendChild(sec);
+  });
+  const slideEls = Array.from(deck.querySelectorAll('.slide'));
+
+  function initDemo(i){
+    if (inited[i]) return;
+    const s = SLIDES[i];
+    if (s.demo && DEMOS[s.demo]){
+      const root = slideEls[i].querySelector('.demo');
+      if (root){ try { DEMOS[s.demo](root); } catch(e){ console.error('demo init', s.demo, e); } }
+    }
+    inited[i] = true;
+  }
+
+  function go(n){
+    n = Math.max(0, Math.min(SLIDES.length - 1, n));
+    if (slideEls[cur]) slideEls[cur].classList.remove('active');
+    cur = n;
+    const el = slideEls[cur];
+    // force reflow so the fade/rise animations restart each visit
+    void el.offsetWidth;
+    el.classList.add('active');
+    initDemo(cur);
+    // reset interactive demo to first step when (re)entering
+    const demoRoot = el.querySelector('.demo');
+    if (demoRoot && demoRoot._reset) { try { demoRoot._reset(); } catch(e){} }
+    update();
+  }
+
+  function update(){
+    elCounter.textContent = (cur + 1) + ' / ' + SLIDES.length;
+    elProgress.style.width = ((cur + 1) / SLIDES.length * 100) + '%';
+    elSecname.textContent = SLIDES[cur].sec || '';
+    elPrev.disabled = cur === 0;
+    elNext.disabled = cur === SLIDES.length - 1;
+  }
+
+  elPrev.onclick = () => go(cur - 1);
+  elNext.onclick = () => go(cur + 1);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(SLIDES.length - 1); }
+  });
+
+  // click-to-advance on slide background (ignore interactive elements)
+  deck.addEventListener('click', (e) => {
+    if (e.target.closest('button, a, input, .demo, table, .toggle')) return;
+    go(cur + 1);
+  });
+
+  go(0);
+})();
+</script>
+</body>
+</html>
