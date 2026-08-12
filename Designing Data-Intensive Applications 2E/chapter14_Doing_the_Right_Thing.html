@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>14장 · 옳은 일 하기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FCFCFD; --panel:#FFFFFF; --ink:#15161B; --ink2:#33353F; --muted:#65687A;
+  --line:#E6E7EC; --line2:#EFEFF3;
+  --healthy:#138A6E; --signal:#2F5BEA; --fault:#D8392B; --warn:#D9870F; --token:#6B4FD8;
+  --healthy-w:#E4F4EF; --signal-w:#E7EDFE; --fault-w:#FBE7E4; --warn-w:#FBF0DE; --token-w:#EFEBFB;
+  --disp:"Space Grotesk","Noto Sans KR",system-ui,sans-serif;
+  --body:"Inter","Noto Sans KR",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --maxw:1120px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--body);
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+  background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+  background-size:42px 42px; background-position:center;
+}
+.deck{position:fixed;inset:0;}
+.slide{
+  position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center;
+  padding:clamp(28px,5vw,84px) clamp(22px,6vw,96px) 84px;
+  opacity:0; visibility:hidden; transform:translateY(14px);
+  transition:opacity .42s ease, transform .42s ease;
+  overflow-y:auto;
+}
+.slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
+.slide.prev{transform:translateY(-14px)}
+.wrap{width:100%;max-width:var(--maxw);margin:0 auto}
+
+/* ---------- typographic system ---------- */
+.eyebrow{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.eyebrow .tag{color:var(--signal);font-weight:600}
+.eyebrow .bar{flex:0 0 26px;height:2px;background:var(--signal)}
+h1{font-family:var(--disp);font-weight:700;line-height:1.05;letter-spacing:-.02em;margin:0;font-size:clamp(34px,6.6vw,76px)}
+h2{font-family:var(--disp);font-weight:600;line-height:1.12;letter-spacing:-.015em;margin:0 0 22px;font-size:clamp(26px,3.9vw,46px)}
+h3{font-family:var(--disp);font-weight:600;margin:0 0 8px;font-size:clamp(17px,1.7vw,21px);letter-spacing:-.01em}
+p{margin:0 0 12px;font-size:clamp(14px,1.32vw,17px);line-height:1.62;color:var(--ink2)}
+.lead{font-size:clamp(16px,1.7vw,21px);color:var(--ink2);line-height:1.6;max-width:62ch}
+.muted{color:var(--muted)}
+strong{color:var(--ink);font-weight:600}
+.en{font-family:var(--mono);font-size:.86em;color:var(--muted);font-weight:500}
+code{font-family:var(--mono);font-size:.88em;background:var(--line2);padding:.08em .4em;border-radius:5px;color:var(--ink)}
+.quote{font-family:var(--disp);font-style:italic;font-weight:500;color:var(--ink);font-size:clamp(18px,2.3vw,28px);line-height:1.4;letter-spacing:-.01em}
+.quote .by{display:block;font-style:normal;font-family:var(--mono);font-size:14px;color:var(--muted);margin-top:14px;letter-spacing:.02em}
+
+/* ---------- building blocks ---------- */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,1.7vw,22px);position:relative}
+.card h3{display:flex;align-items:center;gap:9px}
+.card p{font-size:clamp(13px,1.2vw,15px);margin:0}
+.card p+p{margin-top:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;padding:4px 10px;border-radius:999px;text-transform:uppercase}
+.pill.f{background:var(--fault-w);color:var(--fault)}
+.pill.h{background:var(--healthy-w);color:var(--healthy)}
+.pill.s{background:var(--signal-w);color:var(--signal)}
+.pill.w{background:var(--warn-w);color:var(--warn)}
+.pill.t{background:var(--token-w);color:var(--token)}
+.dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.dot.f{background:var(--fault)} .dot.h{background:var(--healthy)} .dot.s{background:var(--signal)} .dot.w{background:var(--warn)} .dot.t{background:var(--token)}
+ul.clean{list-style:none;margin:0;padding:0}
+ul.clean li{position:relative;padding-left:24px;margin-bottom:11px;font-size:clamp(13.5px,1.28vw,16px);line-height:1.55;color:var(--ink2)}
+ul.clean li::before{content:"";position:absolute;left:4px;top:.62em;width:7px;height:7px;border-radius:2px;background:var(--signal);transform:rotate(45deg)}
+ul.clean li.f::before{background:var(--fault)} ul.clean li.h::before{background:var(--healthy)} ul.clean li.w::before{background:var(--warn)}
+.kbig{font-family:var(--disp);font-weight:700;font-size:clamp(30px,4.4vw,52px);line-height:1;letter-spacing:-.02em}
+.note{border-left:3px solid var(--signal);background:var(--signal-w);padding:14px 16px;border-radius:0 10px 10px 0;font-size:clamp(13px,1.2vw,15px);line-height:1.55;color:var(--ink2)}
+.note.f{border-color:var(--fault);background:var(--fault-w)}
+.note.w{border-color:var(--warn);background:var(--warn-w)}
+.note.t{border-color:var(--token);background:var(--token-w)}
+.note.h{border-color:var(--healthy);background:var(--healthy-w)}
+pre{font-family:var(--mono);font-size:clamp(12px,1.15vw,14px);line-height:1.55;background:#16181F;color:#E9EAF0;border-radius:12px;padding:18px 20px;overflow:auto;margin:0}
+pre .c{color:#7E8AA8} pre .k{color:#7FD0FF} pre .fn{color:#FFD479} pre .hl{color:#FF8A7A}
+
+/* ---------- interactive panel ---------- */
+.lab{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,1.8vw,24px);box-shadow:0 1px 0 rgba(20,22,27,.02)}
+.lab-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.lab-title{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.lab-title::before{content:"▷";color:var(--signal);font-size:10px}
+.btn{font-family:var(--body);font-weight:600;font-size:14px;border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:10px;padding:9px 16px;cursor:pointer;transition:transform .12s ease,opacity .12s;white-space:nowrap}
+.btn:hover{transform:translateY(-1px)} .btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.statusline{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--ink2)}
+.svgwrap{width:100%}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.node-c{fill:var(--panel);stroke:var(--ink);stroke-width:2}
+.node-l{font-family:var(--mono);font-size:13px;fill:var(--ink);font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:5px;background:var(--line);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--signal);cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px var(--signal)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--signal);cursor:pointer;border:2px solid #fff}
+
+/* ---------- chrome: progress, nav, counter ---------- */
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--signal),var(--token));width:0;z-index:50;transition:width .4s ease}
+.chrome{position:fixed;left:0;right:0;bottom:0;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(18px,4vw,40px);z-index:40;background:linear-gradient(0deg,var(--bg) 55%,transparent);pointer-events:none}
+.chrome>*{pointer-events:auto}
+.brand{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--muted)}
+.brand b{color:var(--ink);font-weight:700}
+.nav{display:flex;align-items:center;gap:8px}
+.nav button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;font-size:16px;display:grid;place-items:center;transition:border-color .15s,transform .12s}
+.nav button:hover{border-color:var(--ink);transform:translateY(-1px)}
+.counter{font-family:var(--mono);font-size:13px;color:var(--muted);min-width:64px;text-align:center}
+.counter b{color:var(--ink)}
+.hint{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:5px 12px;border-radius:999px;z-index:40;opacity:1;transition:opacity .5s}
+.hint.hide{opacity:0}
+
+/* section divider slide */
+.divider .wrap{max-width:880px}
+.divider .secno{font-family:var(--mono);font-size:clamp(15px,2vw,22px);color:var(--signal);letter-spacing:.1em;margin-bottom:18px}
+.divider h1{font-size:clamp(32px,6vw,68px)}
+.divider .sub{margin-top:22px;font-size:clamp(15px,1.6vw,19px);color:var(--muted);max-width:60ch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.chips span{font-family:var(--mono);font-size:12px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:var(--panel)}
+
+.titleslide .wrap{max-width:960px}
+.titleslide .kicker{font-family:var(--mono);font-size:clamp(12px,1.3vw,15px);letter-spacing:.18em;text-transform:uppercase;color:var(--signal);margin-bottom:20px}
+.titleslide .src{margin-top:28px;font-family:var(--mono);font-size:13px;color:var(--muted);line-height:1.7}
+.legendrow{display:flex;flex-wrap:wrap;gap:18px;margin-top:30px}
+.legendrow .li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2)}
+
+.fignote{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:10px;letter-spacing:.02em}
+.two{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(20px,3vw,40px);align-items:center}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.scroll-tight{max-height:none}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+.flash{animation:flash .6s ease}
+@keyframes flash{0%{background:var(--warn-w)}100%{}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+<!-- 1 TITLE -->
+<section class="slide titleslide" data-id="t">
+  <div class="wrap">
+    <div class="kicker">Designing Data-Intensive Applications · Chapter 14</div>
+    <h1>옳은 일<br>하기</h1>
+    <p class="lead" style="margin-top:24px">모든 시스템은 목적을 위해 만들어지고, 모든 행동에는 <strong>의도한 결과와 의도하지 않은 결과</strong>가 함께 따라옵니다. 우리가 다루는 데이터는 대부분 <strong>사람에 관한 것</strong>입니다 — 그들의 행동, 관심, 정체성.</p>
+    <div class="legendrow">
+      <div class="li"><span class="dot f"></span>피해 · 차별 · 감시</div>
+      <div class="li"><span class="dot w"></span>주의 · 의도치 않은 결과</div>
+      <div class="li"><span class="dot t"></span>권력 · 프라이버시 권리</div>
+      <div class="li"><span class="dot h"></span>책임 · 규제 · 신뢰</div>
+    </div>
+    <p class="quote" style="margin-top:36px;font-size:clamp(16px,2vw,24px)">"AI 시스템에 세상의 아름다움과 추함과 잔혹함을 모두 먹이면서 아름다움만 비추기를 기대하는 것은 환상이다."
+      <span class="by">— 비나이 우다이 프라부 &amp; 아베바 비르하네 (2020)</span></p>
+  </div>
+</section>
+
+<!-- 2 INTRO -->
+<section class="slide" data-id="intro">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">도입</span> 한 걸음 물러서기</div>
+    <h2>우리가 빼놓았던 근본적인 부분</h2>
+    <div class="two">
+      <div>
+        <p>이 책 전체에서 우리는 데이터 시스템 아키텍처를 살피고 장단점을 평가하고, 신뢰성·확장성·유지보수성을 위한 기법을 탐구했습니다. 그러나 <strong>근본적인 부분 하나</strong>를 빼놓았고, 이제 그것을 채워야 합니다.</p>
+        <p>목적은 단순히 <strong>돈을 버는 것</strong>일 수도 있지만, 결과는 <strong>멀리까지 미칠</strong> 수 있습니다. 이 시스템을 만드는 엔지니어인 우리에게는 그 결과를 신중히 고려하고 <strong>우리의 결정이 해를 끼치지 않도록</strong> 보장할 책임이 있습니다.</p>
+        <p>우리는 데이터를 추상적인 것으로 이야기하지만, 많은 데이터셋은 <strong>사람에 관한 것</strong>임을 기억해야 합니다. 그런 데이터는 <strong>인간성과 존중</strong>으로 다뤄야 합니다. 사용자도 인간이며, <strong>인간의 존엄이 최우선</strong>입니다.</p>
+      </div>
+      <div>
+        <div class="note w">소프트웨어 개발은 점점 더 중요한 <strong>윤리적 선택</strong>을 포함하게 됩니다. <strong>ACM 윤리 및 직업 행동 강령</strong> 같은 지침이 있지만, 실무에서 논의·적용·집행되는 일은 드뭅니다. 그 결과 엔지니어와 제품 관리자가 프라이버시와 부정적 결과에 <strong>대수롭지 않은 태도</strong>를 취하기도 합니다.</div>
+        <div class="note f" style="margin-top:12px">기술은 <strong>그 자체로 선하거나 악하지 않습니다.</strong> 중요한 것은 <strong>어떻게 쓰이고 사람에게 어떤 영향을 주는가</strong>입니다. 검색 엔진 같은 소프트웨어 시스템도, 총 같은 무기와 <strong>같은 방식으로</strong> 그렇습니다. 윤리적 책임은 우리가 져야 하며, 엔지니어가 기술에만 집중하고 그 결과를 무시하는 것은 <strong>충분하지 않습니다.</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 ethics is not a checklist -->
+<section class="slide" data-id="intro2">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">도입</span> 윤리란 무엇인가</div>
+    <h2>윤리는 체크리스트가 아니다</h2>
+    <div class="two">
+      <div>
+        <p>컴퓨팅의 많은 부분과 달리, <strong>윤리의 핵심 개념은 그 의미가 고정되거나 확정적이지 않습니다.</strong> 해석이 필요하고, 그 해석은 주관적일 수 있습니다.</p>
+        <p>무엇이 "좋고" "나쁜지"는 잘 정의되지 않으며, 컴퓨팅 전문가들 사이의 진지한 담론도 부족합니다. <strong>윤리에 대해 추론하는 일은 어렵지만, 무시하기엔 너무 중요합니다.</strong></p>
+      </div>
+      <div class="card" style="border-color:var(--healthy);background:var(--healthy-w)">
+        <div class="pill h"><span class="dot h"></span>그렇다면 윤리는 무엇인가</div>
+        <p style="margin-top:12px;font-size:clamp(15px,1.6vw,19px);color:var(--ink);line-height:1.6">준수 여부를 확인하는 <strong>체크리스트를 훑는 일이 아닙니다.</strong></p>
+        <p style="margin-top:12px;color:var(--ink)">관련된 <strong>사람들과 대화하며</strong> 성찰하는 <strong>참여적이고 반복적인 과정</strong>이고, 그 결과에 대한 <strong>책임(accountability)</strong>을 지는 일입니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIVIDER: PREDICTIVE ANALYTICS -->
+<section class="slide divider" data-id="div-pa">
+  <div class="wrap">
+    <div class="secno">§ 14.1</div>
+    <h1>예측 분석</h1>
+    <p class="sub">날씨나 질병 확산을 예측하는 것과, <strong>재범 가능성·대출 부도·보험 청구</strong>를 예측하는 것은 전혀 다른 문제입니다. 후자는 <strong>개인의 삶에 직접 영향</strong>을 줍니다.</p>
+    <div class="chips">
+      <span>알고리즘 감옥</span><span>편향과 차별</span><span>프록시 변수</span><span>책임과 설명책임</span><span>피드백 루프</span><span>시스템 사고</span>
+    </div>
+  </div>
+</section>
+
+<!-- algorithmic prison — INTERACTIVE -->
+<section class="slide" data-id="pa-prison">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 알고리즘 감옥</div>
+    <h2>"의심스러우면 거절하는 편이 낫다"가 쌓이면</h2>
+    <p class="lead" style="margin-bottom:16px">결제망은 사기를, 은행은 부실 대출을, 항공사는 납치를, 기업은 무능하거나 신뢰할 수 없는 채용을 막고 싶어 합니다. 그들 입장에서는 <strong>놓친 기회의 비용은 낮고 잘못된 결정의 비용은 높으니</strong> 조심하는 것이 당연합니다.</p>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">실험 · 한 번의 "위험" 라벨이 삶의 여러 영역에 미치는 영향</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="pri-run">라벨 부여</button>
+          <button class="btn ghost" id="pri-reset">초기화</button>
+        </div>
+      </div>
+      <div class="svgwrap"><svg id="pri-svg" viewBox="0 0 760 230" role="img" aria-label="알고리즘 라벨이 여러 영역의 거절로 확산되는 과정"></svg></div>
+      <div class="statusline" id="pri-stat">버튼을 눌러 실행하세요.</div>
+    </div>
+    <div class="note f" style="margin-top:16px">일자리·항공 여행·보험·주택 임대·금융 서비스 등 사회의 핵심에서 <strong>체계적으로 배제되는 것</strong>은 개인의 자유에 대한 거대한 제약이라 <strong>"알고리즘 감옥"</strong>이라 불려 왔습니다. 인권을 존중하는 나라의 형사 사법은 <strong>유죄가 입증되기 전까지 무죄</strong>를 추정하지만, 자동화된 시스템은 <strong>어떤 유죄의 증명도 없이, 항소 기회도 거의 없이</strong> 사람을 사회 참여에서 체계적·임의적으로 배제할 수 있습니다.</div>
+  </div>
+</section>
+
+<!-- bias and discrimination -->
+<section class="slide" data-id="pa-bias">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 편향과 차별</div>
+    <h2>규칙 자체를 데이터에서 추론하게 맡긴다는 것</h2>
+    <div class="two">
+      <div>
+        <p>알고리즘의 결정이 사람의 결정보다 <strong>반드시 더 좋거나 더 나쁘지는 않습니다.</strong> 모든 사람은 적극적으로 반대하려 해도 편향을 가지기 쉽고, 차별적 관행은 <strong>문화적으로 제도화</strong>될 수 있습니다. 주관적·본능적 평가보다 데이터에 기반한 결정이 <strong>더 공정하고</strong>, 전통적 시스템에서 간과되거나 불리했던 이들에게 더 나은 기회를 줄 수 있다는 희망도 있습니다.</p>
+        <p>그러나 예측 분석과 AI를 개발할 때 우리는 단순히 <strong>사람의 결정을 소프트웨어로 자동화</strong>하는 것이 아닙니다 — <strong>규칙 자체를 데이터에서 추론하도록 맡기는 것</strong>입니다. 그런데 이 시스템이 학습한 패턴은 <strong>불투명</strong>합니다. 데이터가 상관관계를 보여준다 해도 <strong>왜</strong> 그런지는 모를 수 있습니다.</p>
+        <div class="note f" style="margin-top:14px">입력에 <strong>체계적 편향</strong>이 있다면, 시스템은 그 편향을 학습해 출력에서 <strong>증폭</strong>할 가능성이 매우 큽니다.</div>
+      </div>
+      <div>
+        <div class="note w">많은 나라의 차별 금지법은 <strong>인종, 연령, 성별, 성적 지향, 장애, 신념</strong> 같은 보호 속성에 따른 차별 대우를 금지합니다. 다른 특성은 분석해도 되지만 — <strong>그것이 보호 속성과 상관되어 있다면</strong> 어떻게 될까요?</div>
+        <div class="note f" style="margin-top:12px">이렇게 놓고 보면, 알고리즘이 <strong>편향된 데이터를 입력받아 공정하고 공평한 출력을 낸다</strong>고 믿는 것은 터무니없어 보입니다. 그런데 데이터 기반 의사결정의 지지자들은 종종 그렇게 함축합니다 — <strong>"머신러닝은 편향을 위한 돈세탁"</strong>이라는 풍자가 나온 이유입니다.</div>
+        <div class="note h" style="margin-top:12px">예측 분석 시스템은 <strong>과거를 외삽할 뿐</strong>입니다. 과거가 차별적이었다면 그 차별을 <strong>코드화하고 증폭</strong>합니다. 미래가 과거보다 나아지길 원한다면 <strong>도덕적 상상력</strong>이 필요하고, 그것은 <strong>인간만이 제공할 수 있습니다.</strong> 데이터와 모델은 우리의 <strong>도구여야 하고, 주인이 되어서는 안 됩니다.</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- proxy — INTERACTIVE -->
+<section class="slide" data-id="pa-proxy">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 프록시 변수</div>
+    <h2>보호 속성을 지워도, 우편번호가 그것을 말한다</h2>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">실험 · 입력에서 보호 속성을 제거해 보기</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="prx-a">보호 속성 포함</button>
+          <button class="btn" id="prx-b">보호 속성 제거</button>
+        </div>
+      </div>
+      <div class="svgwrap"><svg id="prx-svg" viewBox="0 0 760 235" role="img" aria-label="보호 속성을 제거해도 프록시 변수로 복원되는 구조"></svg></div>
+      <div class="statusline" id="prx-stat">두 경우를 비교해 보세요.</div>
+    </div>
+    <p style="margin-top:16px">인종적으로 분리된 동네에서는 <strong>우편번호</strong>, 심지어 <strong>IP 주소</strong>도 인종의 강력한 예측 변수입니다. 보호 속성을 입력에서 지워도, 모델은 <strong>상관된 특성을 통해 같은 구분을 복원</strong>할 수 있습니다.</p>
+  </div>
+</section>
+
+<!-- responsibility -->
+<section class="slide" data-id="pa-resp">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 책임과 설명책임</div>
+    <h2>알고리즘을 탓하며 책임을 회피할 수는 없다</h2>
+    <div class="two">
+      <div>
+        <p>사람이 실수하면 <strong>책임을 물을 수 있고</strong>, 영향을 받은 사람은 <strong>항소</strong>할 수 있습니다. 알고리즘도 실수하는데, 잘못되면 누가 책임을 지나요?</p>
+        <ul class="clean" style="margin-top:14px">
+          <li class="f">자율주행차가 사고를 내면 <strong>누가 책임</strong>지는가?</li>
+          <li class="f">자동 신용평가 알고리즘이 특정 인종·종교를 체계적으로 차별한다면 <strong>구제 수단</strong>이 있는가?</li>
+          <li class="f">당신의 ML 시스템의 결정이 <strong>사법 심리</strong>에 오르면, 판사에게 그 알고리즘이 어떻게 결정했는지 <strong>설명할 수 있는가</strong>?</li>
+        </ul>
+        <div class="note f" style="margin-top:14px">사람들이 <strong>알고리즘을 탓하며 자신의 책임을 회피할 수 있어서는 안 됩니다.</strong></div>
+      </div>
+      <div>
+        <div class="card" style="border-color:var(--warn)">
+          <h3><span class="dot w"></span>신용평가 기관 — 고전적 사례</h3>
+          <p>사람에 대한 결정을 위해 데이터를 수집하는 전형적 예입니다. 나쁜 신용점수는 삶을 어렵게 하지만, 적어도 신용점수는 보통 <strong>실제 차입 이력에 관한 관련 사실</strong>에 기반하며, 기록의 오류는 <strong>수정할 수 있습니다</strong>(기관이 쉽게 해주지는 않더라도).</p>
+          <p style="margin-top:10px">반면 ML 기반 점수 알고리즘은 훨씬 <strong>넓은 범위의 입력</strong>을 쓰고 훨씬 <strong>불투명</strong>해서, 특정 결정이 어떻게 나왔는지, 누가 불공정하거나 차별적으로 대우받고 있는지 <strong>이해하기 더 어렵습니다.</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- credit score vs predictive -->
+<section class="slide" data-id="pa-stereo">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 질문이 바뀐다</div>
+    <h2>"당신은 어떻게 행동했나"에서 "당신 같은 사람은 어떻게 행동했나"로</h2>
+    <div class="g2">
+      <div class="card" style="border-color:var(--healthy)">
+        <h3><span class="dot h"></span>신용점수</h3>
+        <p>요약하는 질문: <strong>"당신은 과거에 어떻게 행동했는가?"</strong></p>
+        <p class="muted" style="margin-top:8px">본인의 실제 이력에 기반하며, 오류는 정정 가능합니다.</p>
+      </div>
+      <div class="card" style="border-color:var(--fault)">
+        <h3><span class="dot f"></span>예측 분석</h3>
+        <p>작동하는 질문: <strong>"당신과 비슷한 사람은 누구이고, 그런 사람들은 과거에 어떻게 행동했는가?"</strong></p>
+        <p class="muted" style="margin-top:8px">타인의 행동에 유추한다는 것은 <strong>사람을 고정관념화</strong>하는 것입니다 — 예를 들어 <strong>거주지</strong>(인종과 사회경제적 계층의 근접 프록시)에 기반해서.</p>
+      </div>
+    </div>
+    <div class="two" style="margin-top:18px">
+      <div class="note f"><strong>잘못된 바구니에 담긴 사람</strong>은 어떻게 되나요? 게다가 <strong>잘못된 데이터</strong> 때문에 결정이 틀렸다면 구제는 거의 불가능합니다.</div>
+      <div class="note w">많은 데이터는 <strong>통계적 성격</strong>을 가집니다. 전체 확률 분포가 옳더라도 <strong>개별 사례는 얼마든지 틀릴 수 있습니다.</strong> 어느 나라의 평균 기대수명이 80세라 해서 당신이 80번째 생일에 쓰러진다는 뜻이 아니고, 평균과 분포로부터 <strong>한 개인이 몇 살까지 살지는 거의 말할 수 없습니다.</strong> 예측 시스템의 출력도 확률적이며 개별 사례에서는 틀릴 수 있습니다.</div>
+    </div>
+  </div>
+</section>
+
+<!-- data can do good or harm -->
+<section class="slide" data-id="pa-both">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 같은 능력, 두 방향</div>
+    <h2>데이터의 긍정적 잠재력을 실현하고, 해악을 막는 일</h2>
+    <div class="two">
+      <div>
+        <div class="note f"><strong>데이터의 우월성에 대한 맹목적 믿음</strong>은 망상일 뿐 아니라 <strong>적극적으로 위험합니다.</strong> 데이터 기반 의사결정이 확산될수록 우리는 ① 기존 편향을 강화하지 않는 방법, ② 알고리즘을 <strong>책임 있고 투명하게</strong> 만드는 방법, ③ 알고리즘이 필연적으로 실수할 때 <strong>고치는 방법</strong>을 알아내야 합니다.</div>
+      </div>
+      <div>
+        <div class="g2">
+          <div class="card" style="border-color:var(--healthy)"><h3><span class="dot h"></span>좋은 방향</h3><p>분석은 사람들의 <strong>재정적·사회적 특성</strong>을 드러낼 수 있습니다. 이 힘으로 <strong>가장 도움이 필요한 이들에게 지원을 집중</strong>할 수 있습니다.</p></div>
+          <div class="card" style="border-color:var(--fault)"><h3><span class="dot f"></span>나쁜 방향</h3><p>같은 힘이 <strong>취약한 사람을 식별</strong>해 고금리 대출이나 <strong>가치 없는 학위</strong> 같은 위험한 상품을 파는 약탈적 사업에 쓰이기도 합니다.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- feedback loops — INTERACTIVE -->
+<section class="slide" data-id="pa-loop">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 피드백 루프</div>
+    <h2>수학적 엄밀함의 위장 아래 숨은 하향 나선</h2>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">실험 · 고용주가 신용점수로 채용을 평가할 때</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="loop-step">다음 단계</button>
+          <button class="btn ghost" id="loop-reset">초기화</button>
+        </div>
+      </div>
+      <div class="svgwrap"><svg id="loop-svg" viewBox="0 0 760 250" role="img" aria-label="신용점수와 실업의 자기 강화 피드백 루프"></svg></div>
+      <div class="statusline" id="loop-stat">‘다음 단계’를 눌러 진행하세요.</div>
+    </div>
+    <p style="margin-top:16px">추천 시스템처럼 즉각적 영향이 덜한 예측 애플리케이션에도 어려운 문제가 있습니다. 사용자가 보고 싶어 하는 콘텐츠를 잘 예측하게 되면, <strong>이미 동의하는 의견만</strong> 보여주게 되어 고정관념·허위정보·양극화가 자라는 <strong>반향실(echo chamber)</strong>로 이어질 수 있습니다. 소셜 미디어 반향실이 <strong>선거 캠페인</strong>에 미치는 영향은 이미 목격되고 있습니다.</p>
+  </div>
+</section>
+
+<!-- systems thinking -->
+<section class="slide" data-id="pa-sys">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.1</span> 시스템 사고</div>
+    <h2>컴퓨터 부분만이 아니라, 상호작용하는 사람까지 포함해서</h2>
+    <div class="two">
+      <div>
+        <div class="card" style="border-color:var(--warn)">
+          <h3><span class="dot w"></span>알고리즘 가격 담합</h3>
+          <p>또 다른 피드백 루프의 예: 경제학자들은 독일의 주유소가 <strong>알고리즘 가격 결정</strong>을 도입했을 때 <strong>경쟁이 줄고 소비자 가격이 올랐다</strong>는 것을 발견했습니다 — 알고리즘들이 <strong>담합하는 법을 학습</strong>했기 때문입니다.</p>
+        </div>
+        <div class="note f" style="margin-top:12px">이런 피드백 루프가 언제 생길지 <strong>항상 예측할 수는 없습니다.</strong></div>
+      </div>
+      <div>
+        <div class="note h">그러나 많은 결과는 <strong>전체 시스템</strong>을 생각함으로써 예측할 수 있습니다 — 컴퓨터화된 부분만이 아니라 <strong>그것과 상호작용하는 사람들까지</strong> 포함해서. 이 접근을 <strong>시스템 사고(systems thinking)</strong>라 합니다.</div>
+        <div class="note t" style="margin-top:12px">우리가 던져야 할 질문: 이 시스템은 사람들 사이의 <strong>기존 격차를 강화하고 증폭</strong>하는가(부자를 더 부유하게, 빈자를 더 가난하게), 아니면 <strong>불의에 맞서려</strong> 하는가?</div>
+        <div class="note w" style="margin-top:12px">최선의 의도를 가지고도 우리는 <strong>의도하지 않은 결과의 가능성</strong>을 경계해야 합니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIVIDER: PRIVACY -->
+<section class="slide divider" data-id="div-pt">
+  <div class="wrap">
+    <div class="secno">§ 14.2</div>
+    <h1>프라이버시와<br>추적</h1>
+    <p class="sub">사람에 대한 자동 결정의 문제 외에, <strong>데이터 수집 자체</strong>에도 윤리적 문제가 있습니다. 데이터를 모으는 조직과 그 데이터의 주인인 사람 사이의 관계는 무엇일까요?</p>
+    <div class="chips">
+      <span>서비스인가 감시인가</span><span>동의와 선택의 자유</span><span>프라이버시 = 결정권</span><span>자산과 권력</span><span>산업혁명</span><span>입법과 자율 규제</span>
+    </div>
+  </div>
+</section>
+
+<!-- service or surveillance — INTERACTIVE -->
+<section class="slide" data-id="pt-rel">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 관계의 변화</div>
+    <h2>사용자가 고객인가, 광고주가 고객인가</h2>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">비교 · 비즈니스 모델에 따라 관계가 어떻게 바뀌는가</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="rel-a">사용자가 고객</button>
+          <button class="btn" id="rel-b">광고주가 고객</button>
+        </div>
+      </div>
+      <div class="svgwrap"><svg id="rel-svg" viewBox="0 0 760 235" role="img" aria-label="사용자가 고객일 때와 광고주가 고객일 때의 관계 비교"></svg></div>
+      <div class="statusline" id="rel-stat">두 모델을 번갈아 보세요.</div>
+    </div>
+    <p style="margin-top:16px">사용자가 <strong>명시적으로 입력한 데이터</strong>만 저장한다면 시스템은 사용자를 위한 <strong>서비스</strong>를 수행하고 사용자가 고객입니다. 그러나 활동이 다른 일의 <strong>부수 효과</strong>로 추적·로깅되면 관계는 덜 분명해집니다. 서비스는 더는 사용자가 지시한 것만 하지 않고, <strong>사용자의 이익과 충돌할 수 있는 자기 이익</strong>을 갖게 됩니다.</p>
+  </div>
+</section>
+
+<!-- tracking that users benefit from -->
+<section class="slide" data-id="pt-track">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 추적은 어디까지가 유익한가</div>
+    <h2>사용자가 이득을 보는 추적, 그리고 거기서 멈추지 않는 추적</h2>
+    <div class="two">
+      <div>
+        <h3 style="margin-bottom:10px">사용자가 이득을 보는 추적</h3>
+        <ul class="clean">
+          <li class="h">어떤 <strong>검색 결과가 클릭</strong>되는지 추적하면 순위 개선에 도움이 됩니다</li>
+          <li class="h"><strong>추천</strong>("X를 좋아한 사람은 Y도 좋아했습니다")은 사용자가 흥미롭고 유용한 것을 발견하게 돕습니다</li>
+          <li class="h"><strong>A/B 테스트와 사용자 흐름 분석</strong>은 UI 개선 방향을 알려줍니다</li>
+        </ul>
+        <div class="note h" style="margin-top:14px">이런 기능은 어느 정도의 행동 추적을 요구하며, <strong>사용자도 그로부터 이득을 봅니다.</strong></div>
+      </div>
+      <div>
+        <div class="note f">그러나 비즈니스 모델에 따라 <strong>추적은 거기서 멈추지 않습니다.</strong> 서비스가 <strong>광고로 자금을 조달</strong>하면 실제 고객은 <strong>광고주</strong>이고 사용자의 이익은 <strong>후순위</strong>가 됩니다. 추적 데이터는 더 상세해지고, 분석은 더 멀리 미치며, 마케팅용 <strong>개인별 상세 프로필</strong>을 구축하려고 데이터는 오래 보관됩니다.</div>
+        <div class="note f" style="margin-top:12px">이제 관계는 꽤 달라 보입니다. 사용자는 <strong>무료 서비스를 받고 최대한 참여하도록 유도</strong>됩니다. 추적은 주로 그 개인이 아니라 <strong>서비스에 자금을 대는 광고주의 필요</strong>에 봉사합니다. 이 관계는 더 불길한 함의를 가진 한 단어로 적절히 묘사됩니다 — <strong>감시(surveillance)</strong>.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- surveillance word swap — INTERACTIVE -->
+<section class="slide" data-id="pt-surv">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 감시</div>
+    <h2>사고 실험 — "데이터"를 "감시"로 바꿔 읽어보기</h2>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">실험 · 흔한 문구가 여전히 좋게 들리는지 관찰하기</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="surv-swap">단어 치환</button>
+          <button class="btn ghost" id="surv-reset">되돌리기</button>
+        </div>
+      </div>
+      <div id="surv-text" style="font-family:var(--body);font-size:clamp(15px,1.7vw,21px);line-height:1.75;color:var(--ink);padding:6px 2px 10px">
+      </div>
+      <div class="statusline" id="surv-stat">버튼을 눌러 ‘데이터’를 ‘감시’로 바꿔 보세요.</div>
+    </div>
+    <div class="note w" style="margin-top:16px">이 사고 실험은 이 책에서는 이례적으로 <strong>논쟁적</strong>이지만(『감시 집약적 애플리케이션 설계』라고 해야 할까요), 이 점을 강조하려면 <strong>강한 표현</strong>이 필요합니다. 소프트웨어가 "세상을 먹어치우게" 하려는 시도 속에서 우리는 <strong>역사상 가장 거대한 대중 감시 인프라</strong>를 만들었습니다.</div>
+  </div>
+</section>
+
+<!-- microphone in every room -->
+<section class="slide" data-id="pt-mic">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 모든 방의 마이크</div>
+    <h2>가장 억압적인 과거 정권도 꿈만 꿀 수 있었던 일</h2>
+    <div class="two">
+      <div>
+        <p>우리는 <strong>사람이 사는 모든 공간에 최소 하나의 인터넷 연결 마이크</strong>가 있는 세계로 빠르게 접근하고 있습니다 — 스마트폰, 스마트TV, 음성 인식 비서, 베이비 모니터, 심지어 클라우드 음성 인식을 쓰는 어린이 장난감. 이들 중 다수는 <strong>보안 실적이 형편없습니다.</strong></p>
+        <p>과거와 달라진 점은 <strong>디지털화가 사람에 관한 대량 데이터 수집을 쉽게</strong> 만들었다는 것입니다. 위치와 이동, 사회적 관계와 통신, 구매와 결제, 건강 데이터에 대한 감시는 거의 <strong>회피 불가능</strong>해졌습니다.</p>
+        <div class="note f" style="margin-top:14px">감시 조직은 <strong>당사자보다 그 사람을 더 많이 알게</strong> 될 수 있습니다 — 예를 들어 본인이 알기 전에 <strong>질병이나 경제적 문제를 식별</strong>하는 식으로.</div>
+      </div>
+      <div>
+        <div class="note w">가장 전체주의적이고 억압적인 과거 정권조차 <strong>모든 방에 마이크를 두고</strong> 모든 사람에게 위치와 이동을 추적하는 기기를 <strong>항상 들고 다니게 강제</strong>하는 것은 꿈만 꿀 수 있었습니다. 그런데 디지털 기술이 주는 이득이 너무 커서 우리는 이제 <strong>자발적으로</strong> 이 전면적 감시 상태를 수용합니다. 차이는 데이터를 모으는 주체가 통제를 원하는 정부 기관이 아니라 <strong>서비스를 제공하는 기업</strong>이라는 점뿐입니다.</div>
+        <div class="note t" style="margin-top:12px">모든 데이터 수집이 감시에 해당하는 것은 아니지만, <strong>감시로서 검토해 보는 일</strong>은 데이터 수집자와 우리의 관계를 이해하는 데 도움이 됩니다.</div>
+        <div class="note f" style="margin-top:12px">우리는 왜 기업의 감시를 기꺼이 받아들이는 듯 보일까요? <strong>"숨길 게 없다"</strong>고 느낀다면 — 다시 말해 <strong>기존 권력 구조에 완전히 부합하고, 소외된 소수자가 아니며, 박해를 두려워할 필요가 없다는</strong> 뜻입니다. <strong>모두가 그렇게 운이 좋지는 않습니다.</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- benign purpose -->
+<section class="slide" data-id="pt-benign">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 목적이 무해해 보인다는 것</div>
+    <h2>더 나은 추천일 뿐일까 — 예측 분석과 합쳐질 때</h2>
+    <div class="two">
+      <div>
+        <p>어쩌면 목적이 무해해 보이기 때문일 것입니다 — 명백한 강압과 순응이 아니라, 단지 <strong>더 나은 추천과 더 개인화된 마케팅</strong>일 뿐이라고. 그러나 앞 절의 <strong>예측 분석</strong> 논의와 합쳐 놓으면 그 구별은 훨씬 흐릿해집니다.</p>
+        <ul class="clean" style="margin-top:14px">
+          <li class="f">운전자의 <strong>동의 없이</strong> 자동차가 추적한 주행 행동 데이터가 <strong>보험료에 영향</strong>을 주는 사례가 이미 나타났습니다</li>
+          <li class="f"><strong>피트니스 추적 기기 착용 여부에 따라</strong> 달라지는 건강보험 보장</li>
+        </ul>
+        <div class="note f" style="margin-top:14px">감시가 <strong>보험 보장이나 고용</strong>처럼 삶의 중요한 부분을 좌우하는 결정에 쓰이기 시작하면, 그것은 <strong>훨씬 덜 무해하게</strong> 보입니다.</div>
+      </div>
+      <div>
+        <div class="note w">데이터 분석은 <strong>놀랍도록 침해적인 것</strong>도 드러낼 수 있습니다 — 예를 들어 스마트워치나 피트니스 트래커의 <strong>움직임 센서</strong>로 사용자가 <strong>무엇을 타이핑하는지</strong>(비밀번호 등) 상당한 정확도로 알아낼 수 있습니다.</div>
+        <div class="note f" style="margin-top:12px">센서 정확도와 분석 알고리즘은 <strong>앞으로 더 좋아질 뿐</strong>입니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- consent -->
+<section class="slide" data-id="pt-consent">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 동의와 선택의 자유</div>
+    <h2>"자발적으로 동의했다"는 주장의 세 가지 문제</h2>
+    <div class="g3">
+      <div class="card" style="border-color:var(--warn)">
+        <h3><span class="dot w"></span>① 왜 추적이 필요한가</h3>
+        <p>어떤 추적은 직접 <strong>사용자 기능 개선</strong>으로 이어집니다 — 검색 결과 클릭률, 함께 구매되는 상품. 그러나 <strong>콘텐츠 추천이나 광고용 프로필</strong>을 위한 추적이 정말 <strong>사용자의 이익</strong>인지는 훨씬 불분명합니다. <strong>광고가 서비스 비용을 대기 때문에</strong> 필요한 것 아닐까요?</p>
+      </div>
+      <div class="card" style="border-color:var(--fault)">
+        <h3><span class="dot f"></span>② 의미 있는 동의의 불가능</h3>
+        <p>대부분의 사용자는 어떤 데이터가 들어가는지, 어떻게 보관·처리되는지 <strong>거의 알지 못합니다.</strong> 프라이버시 정책은 밝히기보다 <strong>가리는 데 더 기여</strong>합니다. 무슨 일이 벌어지는지 모른 채 <strong>의미 있는 동의는 불가능</strong>합니다.</p>
+        <p class="muted" style="margin-top:8px">한 사용자의 데이터는 서비스 사용자도 아니고 어떤 약관에도 동의하지 않은 <strong>다른 사람들에 대해서도</strong> 말해줍니다. 전체 사용자 기반의 데이터가 행동 추적과 외부 데이터와 결합된 <strong>파생 데이터셋</strong>은 사용자가 의미 있게 이해할 수 없는 바로 그런 종류입니다.</p>
+      </div>
+      <div class="card" style="border-color:var(--token)">
+        <h3><span class="dot t"></span>③ 일방적인 관계</h3>
+        <p>데이터는 <strong>일방향 과정</strong>으로 추출되며, 진정한 상호성이나 <strong>공정한 가치 교환</strong>이 아닙니다. <strong>대화도, 협상의 여지도 없습니다</strong> — 얼마나 많은 데이터를 주고 어떤 서비스를 받을지. 조건은 <strong>서비스가 정하고 사용자가 정하지 않습니다.</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GDPR consent -->
+<section class="slide" data-id="pt-gdpr">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> GDPR의 동의 요건</div>
+    <h2>"자유롭게 주어진, 구체적이고, 정보에 근거하며, 명확한"</h2>
+    <div class="two">
+      <div>
+        <ul class="clean">
+          <li class="h">동의는 <strong>자유롭게 주어지고, 구체적이고, 정보에 근거하며, 명확</strong>해야 합니다</li>
+          <li class="h">사용자는 <strong>불이익 없이 동의를 거부하거나 철회</strong>할 수 있어야 합니다 — 그렇지 않다면 "자유롭게 주어진" 것으로 보지 않습니다</li>
+          <li class="h">동의 요청은 <strong>이해 가능하고 접근하기 쉬운 형태</strong>로, <strong>명확하고 평이한 언어</strong>로 작성되어야 합니다</li>
+          <li class="f"><strong>침묵, 미리 체크된 박스, 무행동은 동의를 구성하지 않습니다</strong></li>
+        </ul>
+      </div>
+      <div>
+        <div class="note t">동의는 GDPR에서 개인정보 처리의 <strong>유일한 근거는 아닙니다.</strong> 다른 법령 준수나 <strong>생명 보호</strong> 등 여러 근거가 있고, <strong>정당한 이익</strong> 근거는 (사기꾼이 동의하지는 않을) <strong>사기 방지</strong> 같은 일부 활용을 허용합니다. 그럼에도 <strong>동의는 인터넷 서비스에서 가장 빈번히 사용되는 근거</strong>입니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- freedom of choice -->
+<section class="slide" data-id="pt-choice">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 선택의 자유</div>
+    <h2>"쓰지 않으면 된다"는 선택도 자유롭지 않다</h2>
+    <div class="two">
+      <div>
+        <p>감시에 동의하지 않는 사용자는 <strong>그 서비스를 쓰지 않기로 선택할 수 있다</strong>고 주장할 수 있습니다. 그러나 이 선택도 자유롭지 않습니다. 어떤 서비스가 <strong>"대부분의 사람이 기본적 사회 참여에 필수적이라고 여길 만큼"</strong> 널리 쓰인다면, 사람들에게 그것을 <strong>쓰지 말라고 기대하는 것은 합리적이지 않습니다</strong> — 사용은 사실상 <strong>강제적</strong>입니다.</p>
+        <p class="muted">대부분의 서구 사회 공동체에서 스마트폰을 들고 다니고, 사교를 위해 소셜 네트워크를 쓰고, 정보를 찾기 위해 구글을 쓰는 것은 <strong>규범</strong>이 되었습니다. 특히 서비스에 <strong>네트워크 효과</strong>가 있다면, 쓰지 않기로 선택하는 데는 <strong>사회적 비용</strong>이 따릅니다.</p>
+      </div>
+      <div>
+        <div class="note f">추적 정책 때문에 서비스를 거부하기는 <strong>말처럼 쉽지 않습니다.</strong> 이 플랫폼들은 사용자를 <strong>몰입시키도록 특별히 설계</strong>되었고, 많은 경우 <strong>게임 메커니즘과 도박에서 흔한 전술</strong>을 써서 계속 돌아오게 만듭니다.</div>
+        <div class="note f" style="margin-top:12px">그것을 넘어섰다 해도, 참여를 거부하는 것은 <strong>프라이버시 정책을 이해할 시간과 지식이 있고</strong>, 참여했다면 얻었을 <strong>사회적·직업적 기회를 놓칠 여유가 있는</strong> 소수의 <strong>특권층</strong>에게만 가능한 선택입니다.</div>
+        <div class="note w" style="margin-top:12px">덜 특권적인 위치에 있는 사람들에게는 <strong>의미 있는 선택의 자유가 없습니다.</strong> 감시는 <strong>회피 불가능</strong>해집니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- privacy is a decision right -->
+<section class="slide" data-id="pt-priv">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 프라이버시와 데이터 사용</div>
+    <h2>프라이버시는 모든 것을 비밀로 하는 것이 아니다</h2>
+    <div class="two">
+      <div>
+        <p>어떤 사용자들이 삶의 온갖 것 — 사소한 것부터 매우 사적인 것까지 — 을 소셜 미디어에 올린다는 이유로 <strong>"프라이버시는 죽었다"</strong>고 말하는 사람들이 있습니다. 그러나 이 주장은 <strong>거짓이며, "프라이버시"라는 단어에 대한 오해</strong>에 근거합니다.</p>
+        <div class="card" style="border-color:var(--token);background:var(--token-w);margin-top:14px">
+          <div class="pill t"><span class="dot t"></span>프라이버시의 정의</div>
+          <p style="margin-top:12px;font-size:clamp(15px,1.6vw,19px);color:var(--ink);line-height:1.6">프라이버시를 갖는다는 것은 모든 것을 비밀로 유지하는 것이 아니라, <strong>무엇을 누구에게 드러내고, 무엇을 공개하고, 무엇을 비밀로 할지 선택할 자유</strong>를 갖는 것입니다.</p>
+          <p style="margin-top:10px;color:var(--ink)">프라이버시권은 <strong>결정권(decision right)</strong>입니다 — 각자가 상황마다 <strong>비밀과 투명성 사이의 스펙트럼</strong>에서 자기 위치를 정할 수 있게 하는 것. 이는 개인의 <strong>자유와 자율성</strong>의 중요한 측면입니다.</p>
+        </div>
+      </div>
+      <div>
+        <div class="note h"><strong>예시</strong> — 희귀 질환을 가진 사람은 치료법 개발에 도움이 된다면 자신의 <strong>의료 데이터를 연구자에게 제공</strong>하는 것을 매우 기쁘게 여길 수 있습니다. 그러나 그 사람은 <strong>누가 그 데이터에 접근하고 어떤 목적으로 쓰는지에 대한 선택권</strong>을 가져야 합니다.</div>
+        <div class="note f" style="margin-top:12px">만약 그 질환 정보가 <strong>의료 보험이나 고용 접근을 방해</strong>할 수 있다면, 그 사람은 데이터 공유에 훨씬 신중해질 것입니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- rights transfer — INTERACTIVE -->
+<section class="slide" data-id="pt-transfer">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 프라이버시권의 이전</div>
+    <h2>침식되는 것이 아니라, 데이터 수집자에게 이전되는 것</h2>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">실험 · 결정권은 어디로 가는가</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="tr-step">다음 단계</button>
+          <button class="btn ghost" id="tr-reset">초기화</button>
+        </div>
+      </div>
+      <div class="svgwrap"><svg id="tr-svg" viewBox="0 0 760 235" role="img" aria-label="프라이버시 결정권이 개인에서 기업으로 이전되는 과정"></svg></div>
+      <div class="statusline" id="tr-stat">‘다음 단계’를 눌러 진행하세요.</div>
+    </div>
+    <p style="margin-top:16px">기업들은 이 감시의 결과 대부분을 <strong>비밀로 유지하기로 선택</strong>합니다. 드러내면 <strong>소름 끼치게</strong> 여겨져 (다른 회사보다 사람들을 더 많이 아는 것에 의존하는) 사업 모델에 해가 되기 때문입니다. 사용자에 대한 친밀한 정보는 <strong>특정 집단(예: 특정 질병을 가진 사람들)을 겨냥한 광고 도구</strong>의 형태로만 간접적으로 드러납니다.</p>
+  </div>
+</section>
+
+<!-- perception management -->
+<section class="slide" data-id="pt-percept">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 인식 관리</div>
+    <h2>재식별되지 않아도, 공개에 대한 주체성은 이미 잃었다</h2>
+    <div class="two">
+      <div>
+        <p>특정 광고가 겨냥한 사람들의 무리에서 개인이 <strong>재식별될 수 없다 하더라도</strong>, 그들은 일부 친밀한 정보의 <strong>공개에 대한 주체성(agency)</strong>을 이미 잃었습니다. 무엇이 누구에게 드러날지 <strong>자신의 선호에 따라 결정하는 것은 사용자가 아니라</strong>, <strong>이익 극대화를 목표로 프라이버시권을 행사하는 기업</strong>입니다.</p>
+        <p>많은 기업은 <strong>소름 끼친다고 인식되는 것을 피하려</strong> 하며, 자기 데이터 수집이 실제로 얼마나 침해적인지에 대한 질문은 피하고 <strong>사용자 인식 관리</strong>에 집중합니다.</p>
+        <p class="muted">그런데 그 인식 관리조차 종종 서투릅니다 — 예를 들어 <strong>사실적으로는 옳지만</strong> 고통스러운 기억을 자극한다면, 사용자는 그것을 다시 떠올리고 싶지 않을 수 있습니다.</p>
+      </div>
+      <div>
+        <div class="note h">어떤 종류의 데이터든 우리는 그것이 <strong>틀렸거나, 원치 않거나, 부적절할 가능성</strong>을 예상하고 <strong>그런 실패를 다루는 메커니즘</strong>을 만들어야 합니다. 무엇이 "원치 않는" 것이고 "부적절한" 것인지는 물론 <strong>인간의 판단</strong>에 달려 있습니다. 알고리즘은 우리가 명시적으로 <strong>인간의 필요를 존중하도록 프로그래밍하지 않는 한</strong> 그런 개념을 알지 못합니다.</div>
+        <div class="note t" style="margin-top:12px">이 시스템의 엔지니어로서 우리는 <strong>겸손해야</strong> 하며, 그런 실패를 <strong>받아들이고 미리 계획</strong>해야 합니다.</div>
+        <div class="note f" style="margin-top:12px"><strong>프라이버시 설정</strong>은 통제를 사용자에게 일부 돌려주는 <strong>출발점</strong>입니다. 그러나 설정과 무관하게 <strong>서비스 자체는 데이터에 아무런 제약 없이 접근</strong>하며, 프라이버시 정책이 허용하는 어떤 방식으로도 쓸 수 있습니다. 제3자에게 팔지 않겠다고 약속해도, 보통 <strong>내부적으로 처리·분석할 무제한 권리</strong>를 스스로에게 부여하며, 사용자에게 드러나는 것보다 훨씬 멀리 나갑니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- unprecedented transfer -->
+<section class="slide" data-id="pt-unprec">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 역사적으로 전례 없는 일</div>
+    <h2>감시는 늘 있었지만, 비싸고 수동적이었다</h2>
+    <div class="g3">
+      <div class="card" style="border-color:var(--fault)"><h3><span class="dot f"></span>규모의 변화</h3><p>개인에서 기업으로의 이런 <strong>대규모 프라이버시권 이전</strong>은 <strong>역사적으로 전례가 없습니다.</strong> 감시는 늘 존재했지만 <strong>비싸고 수동적</strong>이었으며, 확장 가능하거나 자동화되지 않았습니다.</p></div>
+      <div class="card" style="border-color:var(--healthy)"><h3><span class="dot h"></span>기존 신뢰 관계</h3><p>신뢰 관계도 늘 존재했습니다 — <strong>환자와 의사</strong>, <strong>피고인과 변호사</strong>. 그러나 이런 경우 데이터의 사용은 <strong>윤리적·법적·규제적 제약</strong>에 의해 엄격히 규율되었습니다.</p></div>
+      <div class="card" style="border-color:var(--warn)"><h3><span class="dot w"></span>인터넷 서비스</h3><p>인터넷 서비스는 <strong>의미 있는 동의 없이 방대한 민감 정보를 축적</strong>하고, 사용자가 자기 사적 데이터에 무슨 일이 벌어지는지 <strong>이해하지 못한 채 대규모로 사용</strong>하는 것을 훨씬 쉽게 만들었습니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- data as assets and power -->
+<section class="slide" data-id="pt-asset">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 자산이자 권력인 데이터</div>
+    <h2>"데이터 배기가스"라는 말을 거꾸로 놓아 보면</h2>
+    <div class="two">
+      <div>
+        <p>행동 데이터는 사용자가 서비스와 상호작용한 <strong>부산물</strong>이므로 <strong>"데이터 배기가스(data exhaust)"</strong>라 불리기도 합니다 — 가치 없는 폐기물이라는 함의죠. 이렇게 보면 행동·예측 분석은 버려질 데이터에서 가치를 뽑는 <strong>재활용</strong>처럼 보입니다.</p>
+        <div class="note f" style="margin-top:12px"><strong>거꾸로 보는 것이 더 정확합니다.</strong> 경제적 관점에서 표적 광고가 서비스 비용을 댄다면, 행동 데이터를 생성하는 <strong>사용자 활동은 일종의 노동(labor)</strong>으로 볼 수 있습니다. 더 나아가, 사용자가 상호작용하는 애플리케이션은 <strong>더 많은 개인 정보를 감시 인프라에 먹이도록 유인하는 수단에 불과</strong>하다고 주장할 수도 있습니다.</div>
+        <div class="note f" style="margin-top:12px">온라인 서비스에서 자주 표현되는 <strong>인간의 즐거운 창의성과 사회적 관계</strong>가 <strong>데이터 추출 기계에 냉소적으로 착취</strong>되고 있는 것입니다.</div>
+      </div>
+      <div>
+        <p>개인 데이터가 <strong>가치 있는 자산</strong>이라는 것은, 비밀리에 사람들의 개인 데이터를 사고·집계·분석·재판매하는 <strong>데이터 브로커</strong>의 존재가 증명합니다. 스타트업은 사용자 수, 즉 <strong>"눈알(eyeballs)"</strong> — 다시 말해 <strong>감시 능력</strong>으로 가치를 평가받습니다.</p>
+        <div class="note w" style="margin-top:12px">데이터가 가치 있으니 <strong>많은 이들이 원합니다.</strong> 기업이 원하는 건 물론이고, <strong>정부도 원하며</strong> 비밀 거래, 강압, 법적 강제, 혹은 단순 절도로 얻으려 할 수 있습니다. 회사가 <strong>파산하면</strong> 수집한 개인 데이터는 <strong>매각되는 자산</strong> 중 하나가 됩니다. 그리고 데이터는 보호하기 어려워 <strong>유출은 놀랄 만큼 자주</strong> 일어납니다.</div>
+        <div class="note f" style="margin-top:12px">그래서 비평가들은 데이터가 자산이 아니라 <strong>"유독성 자산(toxic asset)"</strong>, 적어도 <strong>"위험물"</strong>이라고 말합니다. 어쩌면 데이터는 <strong>새로운 금이나 석유가 아니라 새로운 우라늄</strong>일지도 모릅니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- all possible future governments -->
+<section class="slide" data-id="pt-future">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 미래의 모든 정부</div>
+    <h2>"경찰국가를 가능하게 할 기술을 설치하는 것은 시민 위생상 좋지 않다"</h2>
+    <div class="two">
+      <div>
+        <p>데이터 남용을 막을 수 있다고 생각하더라도, 수집할 때마다 우리는 <strong>이익과 그것이 잘못된 손에 들어갈 위험</strong>을 저울질해야 합니다.</p>
+        <ul class="clean" style="margin-top:14px">
+          <li class="f">시스템이 <strong>범죄자나 적대적 외국 정보기관</strong>에 침해될 수 있습니다</li>
+          <li class="f">데이터가 <strong>내부자에 의해 유출</strong>될 수 있습니다</li>
+          <li class="f">회사가 우리의 가치를 공유하지 않는 <strong>부도덕한 경영진</strong>의 손에 넘어갈 수 있습니다</li>
+          <li class="f">국가가 <strong>데이터 제출을 강요하는 데 거리낌 없는 정권</strong>에 장악될 수 있습니다</li>
+        </ul>
+      </div>
+      <div>
+        <div class="note w">그러므로 데이터를 수집할 때 우리는 <strong>오늘의 정치 환경만이 아니라 가능한 모든 미래 정부</strong>를 고려해야 합니다. 앞으로 선출될 모든 정부가 <strong>인권과 시민적 자유를 존중한다는 보장은 없습니다.</strong></div>
+        <p class="quote" style="margin-top:18px;font-size:clamp(15px,1.8vw,22px)">"경찰국가를 언젠가 가능하게 할 수 있는 기술을 설치하는 것은 <strong>시민 위생상 좋지 않다.</strong>"
+          <span class="by">— 브루스 슈나이어</span></p>
+        <div class="note t" style="margin-top:16px">"아는 것이 힘이다"라는 오래된 격언이 있고, 더 나아가 <strong>"자신은 감시를 피하면서 타인을 감시하는 것은 가장 중요한 권력의 형태 중 하나"</strong>입니다. 전체주의 정부가 감시를 원하는 이유가 바로 이것입니다 — <strong>인구를 통제할 권력</strong>을 주기 때문이죠. 오늘의 기술 기업들이 노골적으로 정치권력을 추구하지는 않지만, <strong>대체로 공적 감독 밖에서 은밀히 축적한 데이터와 지식</strong>은 그럼에도 우리 삶에 대한 <strong>큰 권력</strong>을 그들에게 줍니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- industrial revolution — INTERACTIVE -->
+<section class="slide" data-id="pt-ir">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 산업혁명을 기억하라</div>
+    <h2>어두운 면이 관리되어야 했던 또 하나의 혁명</h2>
+    <div class="lab">
+      <div class="lab-head">
+        <span class="lab-title">비교 · 산업혁명 ↔ 정보화 시대</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="ir-a">산업혁명</button>
+          <button class="btn" id="ir-b">정보화 시대</button>
+        </div>
+      </div>
+      <div class="svgwrap"><svg id="ir-svg" viewBox="0 0 760 240" role="img" aria-label="산업혁명과 정보화 시대의 문제와 안전장치 대조"></svg></div>
+      <div class="statusline" id="ir-stat">두 시대를 번갈아 보세요.</div>
+    </div>
+    <p style="margin-top:16px">산업혁명은 지속적 경제 성장과 장기적 생활수준 향상을 가져왔지만 <strong>큰 문제도 함께</strong> 왔습니다. 환경 보호 규제, 작업장 안전 규약, 아동 노동 금지법, 식품 위생 검사 같은 <strong>안전장치가 마련되기까지는 오랜 시간</strong>이 걸렸습니다. 공장이 폐기물을 강에 버리거나 오염된 식품을 팔거나 노동자를 착취할 수 없게 되면서 <strong>사업 비용은 분명히 올랐습니다.</strong> 그러나 사회 전체는 이 규제로부터 <strong>엄청난 이익</strong>을 얻었고, 우리 중 그 이전으로 돌아가고 싶은 사람은 거의 없습니다.</p>
+  </div>
+</section>
+
+<!-- schneier quote -->
+<section class="slide" data-id="pt-quote">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 정보화 시대의 오염</div>
+    <h2>우리의 손자들은 우리를 어떻게 평가할까</h2>
+    <p class="quote" style="margin-bottom:24px">데이터는 정보화 시대의 <strong>오염 문제</strong>이며, 프라이버시 보호는 그 <strong>환경적 도전</strong>이다. 거의 모든 컴퓨터가 정보를 만들어낸다. 그것은 주변에 남아 <strong>썩어간다.</strong> 그것을 어떻게 다루는지 — 어떻게 담아두고 어떻게 폐기하는지 — 는 우리 정보 경제의 건강에 핵심적이다. 오늘 우리가 산업화 시대의 초기 수십 년을 돌아보며 <strong>어떻게 우리 조상들이 산업 세계를 건설하는 데 급급해 오염을 무시할 수 있었는지 의아해하듯</strong>, 우리의 손자들은 정보화 시대의 이 초기 수십 년의 우리를 돌아보며 <strong>데이터 수집과 오용의 도전에 우리가 어떻게 대응했는지로 우리를 평가할 것이다.</strong>
+      <span class="by">— 브루스 슈나이어, 『Data and Goliath』 (2015)</span></p>
+    <div class="note h">산업혁명의 어두운 면이 관리되어야 했던 것과 마찬가지로, 정보화 시대로의 전환에도 <strong>우리가 직면하고 해결해야 할 중대한 문제</strong>가 있습니다. <strong>데이터의 수집과 사용</strong>이 그 문제 중 하나입니다.</div>
+    <p style="margin-top:16px;font-size:clamp(16px,1.8vw,22px);color:var(--ink);font-weight:600">우리는 그들이 자랑스러워할 수 있게 노력해야 합니다.</p>
+  </div>
+</section>
+
+<!-- legislation -->
+<section class="slide" data-id="pt-law">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 입법과 자율 규제</div>
+    <h2>데이터 최소화 원칙 vs 빅데이터의 철학</h2>
+    <div class="two">
+      <div>
+        <p>GDPR은 개인 데이터가 <strong>"구체적이고 명시적이며 정당한 목적을 위해 수집"</strong>되어야 하고 <strong>"그 목적과 양립할 수 없는 방식으로 추가 처리되어서는 안 된다"</strong>고, 또한 처리 목적에 <strong>"적절하고 관련되며 필요한 것으로 제한"</strong>되어야 한다고 규정합니다.</p>
+        <div class="note f" style="margin-top:14px">그러나 이 <strong>데이터 최소화 원칙</strong>은 빅데이터의 철학과 <strong>정면으로 충돌</strong>합니다. 빅데이터의 철학은 수집을 <strong>최대화</strong>하고, 수집한 데이터를 다른 데이터셋과 <strong>결합</strong>하며, 새로운 통찰을 만들기 위해 <strong>실험하고 탐색</strong>하는 것입니다. 탐색이란 <strong>예견되지 않은 목적</strong>으로 데이터를 쓰는 것 — GDPR이 요구하는 "구체적이고 명시적인" 목적의 <strong>정반대</strong>입니다.</div>
+        <p class="muted" style="margin-top:12px">이 규제는 온라인 광고 산업에 어느 정도 영향을 주었지만, <strong>집행은 미약</strong>했고 더 넓은 기술 산업의 문화와 관행에는 <strong>큰 변화를 가져오지 못한 듯</strong> 보입니다.</p>
+      </div>
+      <div>
+        <div class="note w">데이터를 많이 모으는 기업들은 규제를 <strong>부담이자 혁신의 방해물</strong>이라며 폭넓게 반대합니다. 어느 정도는 정당한 반대입니다. 예를 들어 <strong>의료 데이터 공유</strong>는 프라이버시에 분명한 위험을 만들지만 잠재적 기회도 있습니다 — 데이터 분석이 <strong>더 나은 진단이나 치료법</strong>을 찾게 도울 수 있다면 <strong>얼마나 많은 죽음을 막을 수 있을까요?</strong> 과잉 규제는 그런 돌파를 막을 수 있습니다. <strong>잠재적 기회와 위험의 균형을 잡는 일은 어렵습니다.</strong></div>
+        <div class="note h" style="margin-top:12px">근본적으로는 개인 데이터에 대한 <strong>기술 산업의 문화적 전환</strong>이 필요합니다. 사용자를 <strong>최적화할 지표로 보는 것을 멈추고</strong>, 그들이 <strong>존중과 존엄과 주체성을 받을 자격이 있는 인간</strong>임을 기억해야 합니다. 우리 소프트웨어에 의존하는 사람들의 <strong>신뢰를 확립하고 유지</strong>하기 위해 데이터 수집·처리 관행을 <strong>스스로 규제</strong>해야 하고, 사용자를 어둠 속에 두는 대신 <strong>데이터가 어떻게 쓰이는지 교육</strong>하는 일도 우리가 맡아야 합니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- first step -->
+<section class="slide" data-id="pt-step">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.2</span> 첫걸음</div>
+    <h2>갖지 않은 데이터는 유출되지도, 도난되지도, 강제 제출되지도 않는다</h2>
+    <div class="two">
+      <div>
+        <div class="card" style="border-color:var(--healthy);background:var(--healthy-w)">
+          <div class="pill h"><span class="dot h"></span>국립공원의 비유</div>
+          <p style="margin-top:12px;color:var(--ink)">각 개인이 <strong>프라이버시(자기 데이터에 대한 통제)를 유지</strong>하게 하고, 감시를 통해 그 통제를 <strong>빼앗지 않아야</strong> 합니다.</p>
+          <p style="margin-top:10px;color:var(--ink)">우리 데이터를 통제할 개인의 권리는 <strong>국립공원의 자연환경</strong>과 같습니다 — <strong>명시적으로 보호하고 돌보지 않으면 파괴</strong>됩니다. 그것은 <strong>공유지의 비극</strong>이 될 것이고, 우리 모두가 더 나빠질 것입니다.</p>
+          <p style="margin-top:10px;font-size:clamp(15px,1.6vw,19px);color:var(--ink);font-weight:600">편재하는 감시는 <strong>필연이 아닙니다.</strong> 우리는 아직 그것을 멈출 수 있습니다.</p>
+        </div>
+      </div>
+      <div>
+        <div class="note h"><strong>첫걸음</strong> — 데이터를 영원히 보관하지 말고, <strong>더 이상 필요하지 않게 되면 즉시 삭제</strong>하며, 애초에 <strong>수집하는 양을 최소화</strong>해야 합니다.</div>
+        <div class="note t" style="margin-top:12px"><strong>갖고 있지 않은 데이터는 유출되거나 도난될 수 없고, 정부가 제출을 강제할 수도 없습니다.</strong></div>
+        <div class="note" style="margin-top:12px">전반적으로 <strong>문화와 태도의 변화</strong>가 필요할 것입니다. 기술 분야에서 일하는 사람으로서 <strong>우리 일의 사회적 영향을 고려하지 않는다면, 우리는 우리 일을 제대로 하고 있는 것이 아닙니다.</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIVIDER SUMMARY -->
+<section class="slide divider" data-id="div-sum">
+  <div class="wrap">
+    <div class="secno">§ 14.3</div>
+    <h1>요약</h1>
+    <p class="sub">이것으로 이 책의 끝에 이르렀습니다. 우리는 아주 많은 땅을 밟아 왔습니다 — 1장의 아키텍처 트레이드오프에서 13장의 스트리밍 철학까지.</p>
+  </div>
+</section>
+
+<!-- book journey 1 -->
+<section class="slide" data-id="sum-book1">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.3</span> 요약 · 책의 여정 ①</div>
+    <h2>1장 – 7장</h2>
+    <div class="grid g2">
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>1장 · 데이터 시스템 아키텍처의 트레이드오프</h3><p>분석 시스템과 운영 시스템을 대조하고, 클라우드와 자체 호스팅을 비교하고, 분산과 단일 노드를 저울질하며, <strong>비즈니스의 필요와 사용자의 필요</strong>를 어떻게 조화시킬지 논의했습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>2장 · 비기능 요구사항 정의</h3><p><strong>성능, 신뢰성, 확장성, 유지보수성</strong> 같은 여러 비기능 요구사항을 어떻게 정의하는지 보았습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>3장 · 데이터 모델과 질의 언어</h3><p>관계형·문서·그래프 모델, 이벤트 소싱, DataFrame의 스펙트럼을 탐구하고 SQL·Cypher·SPARQL·Datalog·GraphQL을 살폈습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>4장 · 저장과 검색</h3><p>OLTP용 저장 엔진(<strong>LSM 트리와 B 트리</strong>), 분석용(<strong>열 지향 저장</strong>), 정보 검색용 인덱스(<strong>전문 검색과 벡터 검색</strong>)를 다뤘습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>5장 · 인코딩과 진화</h3><p>데이터 객체를 바이트로 인코딩하는 여러 방법과 요구사항 변화에 따른 <strong>진화 지원</strong>을 검토했습니다. 데이터베이스, 서비스 호출, 워크플로 엔진, 이벤트 기반 아키텍처를 통한 데이터 흐름도 비교했습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>6장 · 복제 &amp; 7장 · 샤딩</h3><p>단일 리더·다중 리더·리더 없는 복제의 트레이드오프, 쓰기 후 읽기 같은 <strong>일관성 모델</strong>, 오프라인 작업을 가능하게 하는 <strong>동기화 엔진</strong>. 그리고 샤딩의 <strong>리밸런싱·요청 라우팅·보조 인덱싱</strong> 전략.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- book journey 2 -->
+<section class="slide" data-id="sum-book2">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.3</span> 요약 · 책의 여정 ②</div>
+    <h2>8장 – 13장</h2>
+    <div class="grid g2">
+      <div class="card"><h3 style="font-size:16px"><span class="dot t"></span>8장 · 트랜잭션</h3><p>내구성, 다양한 격리 수준(읽기 커밋·스냅숏 격리·직렬성)을 달성하는 방법, 그리고 분산 트랜잭션에서 <strong>원자성을 보장하는 방법</strong>을 다뤘습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot f"></span>9장 · 분산 시스템의 골칫거리</h3><p>네트워크 결함과 지연, 시계 오류, 프로세스 일시정지, 크래시 — 이들이 <strong>락처럼 단순해 보이는 것조차</strong> 올바르게 구현하기 어렵게 만드는 과정을 살폈습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot h"></span>10장 · 일관성과 합의</h3><p>여러 형태의 <strong>합의</strong>와 그것이 가능하게 하는 일관성 모델(<strong>선형성</strong>)을 깊이 파고들었습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>11장 · 배치 처리</h3><p>간단한 Unix 도구 체인에서 분산 파일시스템·객체 스토리지를 쓰는 <strong>대규모 분산 배치 프로세서</strong>까지 쌓아 올렸습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot s"></span>12장 · 스트림 처리</h3><p>배치 처리를 스트림 처리로 일반화하고, 기반이 되는 <strong>메시지 브로커, CDC, 결함 감내</strong>, 그리고 <strong>스트리밍 조인</strong> 같은 처리 패턴을 논의했습니다.</p></div>
+      <div class="card"><h3 style="font-size:16px"><span class="dot t"></span>13장 · 스트리밍 시스템의 철학</h3><p>이질적인 데이터 시스템을 <strong>통합</strong>하고, 시스템을 <strong>진화</strong>시키고, 애플리케이션을 더 쉽게 <strong>확장</strong>하게 하는 스트리밍 시스템의 철학을 탐구했습니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- summary ethics -->
+<section class="slide" data-id="sum-eth">
+  <div class="wrap">
+    <div class="eyebrow"><span class="bar"></span><span class="tag">14.3</span> 요약 · 윤리</div>
+    <h2>데이터는 선을 행할 수도 있지만, 상당한 해악도 끼칠 수 있다</h2>
+    <div class="two">
+      <div>
+        <ul class="clean">
+          <li class="f">사람들의 삶에 <strong>심각한 영향을 주고 항소하기 어려운</strong> 결정을 내리는 것</li>
+          <li class="f"><strong>차별과 착취</strong>로 이어지는 것</li>
+          <li class="f"><strong>감시를 정상화</strong>하는 것</li>
+          <li class="f"><strong>친밀한 정보를 노출</strong>하는 것</li>
+          <li class="w"><strong>데이터 유출</strong>의 위험을 감수하는 것</li>
+          <li class="w">선의로 시작한 데이터 사용이 <strong>의도하지 않은 결과</strong>를 낳는 것</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:var(--healthy);background:var(--healthy-w)">
+        <div class="pill h"><span class="dot h"></span>마지막 말</div>
+        <p style="margin-top:12px;font-size:clamp(15px,1.7vw,20px);color:var(--ink);line-height:1.65">소프트웨어와 데이터가 세상에 미치는 <strong>큰 영향</strong>을 생각할 때, 엔지니어인 우리는 우리가 <strong>살고 싶은 세상</strong>을 향해 일해야 할 <strong>책임</strong>을 지고 있음을 기억해야 합니다 — <strong>사람을 인간성과 존중으로 대하는 세상</strong>을.</p>
+        <p style="margin-top:14px;font-size:clamp(15px,1.7vw,20px);color:var(--ink);font-weight:700">그 목표를 향해 함께 노력합시다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Closing -->
+<section class="slide titleslide" data-id="end">
+  <div class="wrap">
+    <div class="kicker">Chapter 14 · 마무리</div>
+    <h1>기술은 중립적이지만<br>우리의 선택은 아니다</h1>
+    <p class="lead" style="margin-top:24px">예측 분석은 과거를 외삽할 뿐이고, 미래를 더 낫게 만드는 <strong>도덕적 상상력</strong>은 인간만이 제공할 수 있습니다. 프라이버시는 비밀이 아니라 <strong>결정권</strong>이며, 우리가 명시적으로 보호하지 않으면 파괴됩니다. 데이터와 모델은 우리의 <strong>도구여야 하고, 주인이 되어서는 안 됩니다.</strong></p>
+    <p class="src">출처 · Martin Kleppmann &amp; Chris Riccomini,<br><em>Designing Data-Intensive Applications</em>, 2nd ed. — Chapter 14: Doing the Right Thing</p>
+  </div>
+</section>
+</div>
+<div class="hint" id="hint">← → 또는 스페이스로 이동</div>
+<div class="chrome">
+  <div class="brand"><b>DDIA</b> · 14장 옳은 일 하기</div>
+  <div class="nav">
+    <div class="counter"><b id="cur">1</b> / <span id="total">1</span></div>
+    <button id="prev" aria-label="이전">‹</button>
+    <button id="next" aria-label="다음">›</button>
+  </div>
+</div>
+<script>/* ============================================================
+   DDIA 14장 인터랙티브 프레젠테이션 — 엔진 + 위젯
+   ============================================================ */
+(function(){
+"use strict";
+
+/* ---------- shared helpers ---------- */
+var SVGNS = "http://www.w3.org/2000/svg";
+var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+var MONO = cv("--mono"), DISP = cv("--disp"), BODY = cv("--body");
+var C = {
+  ink:cv("--ink"), ink2:cv("--ink2"), muted:cv("--muted"), line:cv("--line"), line2:cv("--line2"),
+  panel:cv("--panel"), healthy:cv("--healthy"), signal:cv("--signal"), fault:cv("--fault"),
+  warn:cv("--warn"), token:cv("--token"),
+  healthyW:cv("--healthy-w"), signalW:cv("--signal-w"), faultW:cv("--fault-w"),
+  warnW:cv("--warn-w"), tokenW:cv("--token-w")
+};
+function E(tag, attrs, parent){
+  var e = document.createElementNS(SVGNS, tag), k;
+  if(attrs) for(k in attrs) e.setAttribute(k, attrs[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, attrs){
+  var t = E("text", Object.assign({x:x, y:y, "font-family":MONO, "font-size":13, fill:C.ink}, attrs||{}), parent);
+  t.textContent = s; return t;
+}
+function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+function byId(id){ return document.getElementById(id); }
+function tween(dur, upd, done){
+  if(reduceMotion){ upd(1); if(done) done(); return; }
+  var t0 = performance.now();
+  function fr(now){
+    var p = Math.min(1, (now - t0)/dur);
+    upd(p);
+    if(p < 1) requestAnimationFrame(fr); else if(done) done();
+  }
+  requestAnimationFrame(fr);
+}
+
+/* ---------- node box helper (for several widgets) ---------- */
+function nodeBox(svg, x, y, label, color, opts){
+  opts = opts || {};
+  var w = opts.w || 92, h = opts.h || 60;
+  var g = E("g", {}, svg);
+  E("rect", {x:x-w/2, y:y-h/2, width:w, height:h, rx:12, fill:C.panel, stroke:color, "stroke-width":2.5}, g);
+  if(!opts.noDot) E("circle", {cx:x, cy:y-h/2+16, r:6, fill:color}, g);
+  txt(g, x, y+ (opts.noDot? 5 : 16), label, {"text-anchor":"middle","font-size":opts.fs||13, fill:C.ink, "font-weight":600});
+  if(opts.sub) txt(g, x, y+h/2-8, opts.sub, {"text-anchor":"middle","font-size":11, fill:C.muted});
+  if(opts.down){
+    E("line", {x1:x-20,y1:y-18,x2:x+20,y2:y+18,stroke:C.fault,"stroke-width":3,"stroke-linecap":"round"}, g);
+    E("line", {x1:x+20,y1:y-18,x2:x-20,y2:y+18,stroke:C.fault,"stroke-width":3,"stroke-linecap":"round"}, g);
+  }
+  return g;
+}
+
+/* halts: stop background timers when leaving a slide */
+var HALTS = [];
+function halt(){ for(var i=0;i<HALTS.length;i++){ try{HALTS[i]();}catch(e){} } }
+
+/* ---------- local helpers shared by ch14 widgets ---------- */
+function box(parent, x, y, w, h, label, color, sub){
+  var g = E("g", {}, parent);
+  E("rect", {x:x-w/2, y:y-h/2, width:w, height:h, rx:10, fill:C.panel, stroke:color, "stroke-width":2.2}, g);
+  txt(g, x, y + (sub?-2:4), label, {"text-anchor":"middle","font-size":11.5, fill:C.ink, "font-weight":600});
+  if(sub) txt(g, x, y+13, sub, {"text-anchor":"middle","font-size":10, fill:C.muted});
+  return g;
+}
+function arw(parent, x1,y1,x2,y2, color, label, dashed, mid){
+  var a = {x1:x1,y1:y1,x2:x2,y2:y2,stroke:color,"stroke-width":2,"marker-end":"url(#c14-ah)"};
+  if(dashed) a["stroke-dasharray"]="5 4";
+  E("line", a, parent);
+  if(label) txt(parent, (x1+x2)/2, (y1+y2)/2 - (mid||8), label, {"text-anchor":"middle","font-size":10.5, fill:color, "font-weight":600});
+}
+function defsArrow(svg){
+  var d = E("defs",{},svg);
+  var m = E("marker",{id:"c14-ah",viewBox:"0 0 10 10",refX:9,refY:5,markerWidth:7,markerHeight:7,orient:"auto-start-reverse"},d);
+  E("path",{d:"M0,0L10,5L0,10z",fill:C.ink2},m);
+}
+function TQ(){
+  var ts = [];
+  return { at: function(ms, fn){ ts.push(setTimeout(fn, ms)); }, clear: function(){ ts.forEach(clearTimeout); ts = []; } };
+}
+
+/* ============================================================
+   WIDGET 1 — 알고리즘 감옥 (14.1)
+   ============================================================ */
+function w_prison(){
+  var svg = byId("pri-svg"); if(svg.dataset.built) return; svg.dataset.built="1";
+  var stat = byId("pri-stat"), runBtn = byId("pri-run"), resetBtn = byId("pri-reset");
+  var q = TQ(); HALTS.push(function(){ q.clear(); runBtn.disabled=false; });
+  var AREAS = [
+    {x:150,y:170,n:"일자리"},
+    {x:300,y:200,n:"항공 여행"},
+    {x:450,y:200,n:"보험 보장"},
+    {x:600,y:170,n:"주택 임대"},
+    {x:670,y:104,n:"금융 서비스"}
+  ];
+  function base(){
+    clear(svg); defsArrow(svg);
+    box(svg, 120, 52, 190, 44, "예측 알고리즘", C.token, "\"의심스러우면 거절\"");
+    box(svg, 120, 116, 190, 40, "개인", C.signal, "라벨: —");
+    AREAS.forEach(function(a){ box(svg, a.x, a.y, 118, 36, a.n, C.line, null); });
+    txt(svg, 380, 26, "한 번의 라벨이 여러 영역으로 퍼진다", {"text-anchor":"middle","font-size":11.5, fill:C.muted, "font-weight":600});
+  }
+  function run(){
+    q.clear(); base(); runBtn.disabled=true;
+    stat.textContent="알고리즘이 이 사람을 ‘위험’으로 라벨링한다 — 정확할 수도, 잘못될 수도 있다."; stat.style.color=C.warn;
+    q.at(200, function(){
+      box(svg, 120, 116, 190, 40, "개인", C.fault, "라벨: 위험 (증명 없음)");
+      arw(svg, 120, 76, 120, 94, C.fault, null);
+    });
+    AREAS.forEach(function(a, i){
+      q.at(700 + i*450, function(){
+        box(svg, a.x, a.y, 118, 36, a.n, C.fault, null);
+        txt(svg, a.x, a.y+30, "✕ 거절", {"text-anchor":"middle","font-size":11, fill:C.fault, "font-weight":700});
+        stat.textContent = a.n + "에서 거절 — 거절이 누적된다."; stat.style.color=C.fault;
+      });
+    });
+    q.at(700 + AREAS.length*450 + 300, function(){
+      E("rect",{x:230,y:60,width:300,height:34,rx:9,fill:C.faultW,stroke:C.fault,"stroke-width":1.8},svg);
+      txt(svg, 380, 82, "알고리즘 감옥 — 항소 기회 거의 없음", {"text-anchor":"middle","font-size":13, fill:C.fault, "font-weight":700});
+      stat.textContent="사회 핵심 영역에서 체계적으로 배제되는 것은 개인 자유에 대한 거대한 제약이다."; stat.style.color=C.fault;
+      runBtn.disabled=false;
+    });
+  }
+  base();
+  runBtn.addEventListener("click", run);
+  resetBtn.addEventListener("click", function(){ q.clear(); base(); runBtn.disabled=false; stat.textContent="버튼을 눌러 실행하세요."; stat.style.color=C.ink2; });
+}
+
+/* ============================================================
+   WIDGET 2 — 프록시 변수 (14.1)
+   ============================================================ */
+function w_proxy(){
+  var svg = byId("prx-svg"); if(svg.dataset.built) return; svg.dataset.built="1";
+  var stat = byId("prx-stat"), bA = byId("prx-a"), bB = byId("prx-b");
+  var FEATS = [
+    {n:"인종 (보호 속성)", prot:true},
+    {n:"우편번호", prot:false, proxy:true},
+    {n:"IP 주소", prot:false, proxy:true},
+    {n:"구매 이력", prot:false}
+  ];
+  function draw(removed){
+    clear(svg); defsArrow(svg);
+    txt(svg, 160, 24, "입력 특성", {"text-anchor":"middle","font-size":11.5, fill:C.muted, "font-weight":700});
+    FEATS.forEach(function(f, i){
+      var y = 52 + i*46;
+      var dead = removed && f.prot;
+      var col = f.prot ? (dead ? C.line : C.fault) : (f.proxy ? C.warn : C.signal);
+      var g = box(svg, 160, y, 180, 34, f.n, col, null);
+      if(dead){
+        g.setAttribute("opacity", 0.45);
+        E("line",{x1:74,y1:y-14,x2:246,y2:y+14,stroke:C.fault,"stroke-width":2.2},svg);
+      } else {
+        arw(svg, 252, y, 388, 130, C.line2, null);
+      }
+    });
+    // correlation bracket on the left, between protected trait and its proxies
+    E("path",{d:"M64 52 L44 52 L44 144 L64 144", fill:"none", stroke:C.warn, "stroke-width":1.8, "stroke-dasharray":"4 4"},svg);
+    txt(svg, 44, 38, "상관", {"text-anchor":"middle","font-size":10.5, fill:C.warn, "font-weight":700});
+    box(svg, 470, 130, 152, 50, "ML 모델", C.token, "규칙을 데이터에서 학습");
+    arw(svg, 548, 130, 636, 130, C.token, null);
+    box(svg, 690, 130, 96, 44, "출력", C.fault, null);
+    if(removed){
+      txt(svg, 440, 196, "우편번호·IP가 인종의 프록시로 작동 → 같은 구분이 복원됨", {"text-anchor":"middle","font-size":11.5, fill:C.fault, "font-weight":700});
+      txt(svg, 440, 218, "\"머신러닝은 편향을 위한 돈세탁\"", {"text-anchor":"middle","font-size":11, fill:C.muted});
+      stat.textContent="보호 속성을 지웠지만 편향은 사라지지 않았다 — 편향된 입력에서 공정한 출력이 나오지는 않는다."; stat.style.color=C.fault;
+    }else{
+      txt(svg, 440, 196, "보호 속성이 직접 쓰이면 명백한 차별 — 많은 나라에서 위법", {"text-anchor":"middle","font-size":11.5, fill:C.fault, "font-weight":700});
+      txt(svg, 440, 218, "그런데 그것을 지우면 편향도 사라질까?", {"text-anchor":"middle","font-size":11, fill:C.muted});
+      stat.textContent="인종·연령·성별·성적 지향·장애·신념에 따른 차별 대우는 차별 금지법이 금지한다."; stat.style.color=C.warn;
+    }
+  }
+  draw(true);
+  bA.addEventListener("click", function(){ draw(false); });
+  bB.addEventListener("click", function(){ draw(true); });
+}
+
+/* ============================================================
+   WIDGET 3 — 피드백 루프 (14.1)
+   ============================================================ */
+function w_loop(){
+  var svg = byId("loop-svg"); if(svg.dataset.built) return; svg.dataset.built="1";
+  var stat = byId("loop-stat"), stepBtn = byId("loop-step"), resetBtn = byId("loop-reset");
+  var cx=380, cy=128, R=88, step=0, layer;
+  var NODES = [
+    {n:"불운한 재정 위기", d:"통제 밖의 사건"},
+    {n:"청구 연체", d:"신용점수 하락"},
+    {n:"채용 거절", d:"고용주가 점수 확인"},
+    {n:"실업 → 빈곤", d:"점수 더 악화"}
+  ];
+  function pt(i){ var a = -Math.PI/2 + i*Math.PI/2; return {x:cx + R*1.9*Math.cos(a), y:cy + R*Math.sin(a)}; }
+  function base(){
+    clear(svg); defsArrow(svg);
+    txt(svg, 12, 18, "자기 강화 하향 나선", {"font-size":12, fill:C.muted, "font-weight":700});
+    layer = E("g",{},svg);
+    for(var i=0;i<4;i++){
+      var p = pt(i);
+      box(svg, p.x, p.y, 168, 44, NODES[i].n, C.line, NODES[i].d);
+    }
+    txt(svg, cx, cy+6, "신용점수", {"text-anchor":"middle","font-size":13, fill:C.muted, "font-weight":700}).id="loop-score";
+    txt(svg, cx, cy+26, "720 · 양호", {"text-anchor":"middle","font-size":12, fill:C.healthy, "font-weight":700}).id="loop-val";
+  }
+  function score(v, label, color){
+    var a=byId("loop-val"); if(a){ a.textContent = v + " · " + label; a.setAttribute("fill", color); }
+  }
+  var STEPS = [
+    function(){ stat.textContent="출발 — 좋은 신용점수를 가진 좋은 노동자입니다."; stat.style.color=C.healthy;
+      var p=pt(0); box(layer, p.x, p.y, 168, 44, NODES[0].n, C.warn, NODES[0].d);
+      score(720, "양호", C.healthy); },
+    function(){ stat.textContent="통제할 수 없는 불운으로 재정 곤란에 빠져 청구를 놓칩니다 → 점수 하락"; stat.style.color=C.warn;
+      var p=pt(1); box(layer, p.x, p.y, 168, 44, NODES[1].n, C.warn, NODES[1].d);
+      arw(layer, 430, 64, 520, 104, C.warn, null);
+      score(610, "주의", C.warn); },
+    function(){ stat.textContent="고용주가 채용 평가에 신용점수를 쓰기 때문에 일자리를 얻기 어려워집니다"; stat.style.color=C.fault;
+      var p=pt(2); box(layer, p.x, p.y, 168, 44, NODES[2].n, C.fault, NODES[2].d);
+      arw(layer, 520, 152, 430, 192, C.fault, null);
+      score(560, "위험", C.fault); },
+    function(){ stat.textContent="실업이 빈곤으로 밀어내고, 그것이 점수를 더 악화시켜 취업이 더 어려워집니다"; stat.style.color=C.fault;
+      var p=pt(3); box(layer, p.x, p.y, 168, 44, NODES[3].n, C.fault, NODES[3].d);
+      arw(layer, 330, 192, 240, 152, C.fault, null);
+      score(480, "매우 위험", C.fault); },
+    function(){ stat.textContent="루프가 닫혔습니다 — 수학적 엄밀함의 위장 아래 숨은 유해한 가정이 만든 하향 나선."; stat.style.color=C.fault;
+      arw(layer, 240, 104, 330, 64, C.fault, null);
+      E("rect",{x:cx-92,y:cy+40,width:184,height:26,rx:8,fill:C.faultW,stroke:C.fault,"stroke-width":1.6},layer);
+      txt(layer, cx, cy+58, "자기 강화 피드백 루프", {"text-anchor":"middle","font-size":11.5, fill:C.fault, "font-weight":700});
+      stepBtn.disabled=true; }
+  ];
+  function reset(){ base(); step=0; stepBtn.disabled=false; stat.textContent="‘다음 단계’를 눌러 진행하세요."; stat.style.color=C.ink2; }
+  reset();
+  stepBtn.addEventListener("click", function(){ if(step>=STEPS.length) return; STEPS[step](); step++; });
+  resetBtn.addEventListener("click", reset);
+}
+
+/* ============================================================
+   WIDGET 4 — 서비스 vs 감시 (14.2)
+   ============================================================ */
+function w_rel(){
+  var svg = byId("rel-svg"); if(svg.dataset.built) return; svg.dataset.built="1";
+  var stat = byId("rel-stat"), bA = byId("rel-a"), bB = byId("rel-b");
+
+  function svc(){
+    clear(svg); defsArrow(svg);
+    box(svg, 150, 110, 160, 50, "사용자 = 고객", C.healthy, "명시적으로 입력한 데이터");
+    box(svg, 470, 110, 170, 50, "서비스", C.healthy, "사용자를 위해 수행");
+    arw(svg, 232, 92, 382, 92, C.healthy, "데이터 입력 · 요금 지불");
+    arw(svg, 382, 128, 232, 128, C.healthy, "요청한 기능 제공", false, -2);
+    txt(svg, 310, 186, "이해관계가 정렬됨 — 서비스는 사용자가 지시한 것을 한다", {"text-anchor":"middle","font-size":12, fill:C.healthy, "font-weight":700});
+    stat.textContent="사용자가 명시적으로 입력한 데이터만 저장한다면, 시스템은 사용자를 위한 서비스다."; stat.style.color=C.healthy;
+  }
+  function surv(){
+    clear(svg); defsArrow(svg);
+    box(svg, 130, 78, 150, 46, "사용자", C.warn, "무료 서비스 · 참여 유도");
+    box(svg, 390, 110, 168, 50, "서비스", C.warn, "자기 이익을 갖게 됨");
+    box(svg, 650, 78, 150, 46, "광고주 = 고객", C.fault, "실제 자금 제공자");
+    arw(svg, 206, 90, 306, 100, C.fault, "행동 추적 (부수 효과)");
+    arw(svg, 474, 100, 574, 90, C.fault, "상세 프로필 · 타겟팅");
+    arw(svg, 574, 66, 206, 66, C.fault, "자금", false, -2);
+    txt(svg, 390, 178, "사용자의 이익은 후순위 · 데이터는 프로필 구축을 위해 장기 보관", {"text-anchor":"middle","font-size":12, fill:C.fault, "font-weight":700});
+    txt(svg, 390, 206, "이 관계를 적절히 묶는 단어 — 감시(surveillance)", {"text-anchor":"middle","font-size":12.5, fill:C.fault, "font-weight":700});
+    stat.textContent="광고로 자금을 조달하면 실제 고객은 광고주이고, 서비스는 사용자와 충돌할 수 있는 자기 이익을 갖는다."; stat.style.color=C.fault;
+  }
+  surv();
+  bA.addEventListener("click", svc);
+  bB.addEventListener("click", surv);
+}
+
+/* ============================================================
+   WIDGET 5 — data → surveillance 단어 치환 (14.2)
+   ============================================================ */
+function w_surv(){
+  var el = byId("surv-text"); if(el.dataset.built) return; el.dataset.built="1";
+  var stat = byId("surv-stat"), swapBtn = byId("surv-swap"), resetBtn = byId("surv-reset");
+  var PLAIN = '"우리의 <b>데이터</b> 기반 조직에서는 실시간 <b>데이터</b> 스트림을 수집해 <b>데이터</b> 웨어하우스에 저장합니다. 우리 <b>데이터</b> 과학자들은 고급 분석과 <b>데이터</b> 처리를 통해 새로운 통찰을 도출합니다."';
+  var SWAPPED = '"우리의 <b style="color:var(--fault)">감시</b> 기반 조직에서는 실시간 <b style="color:var(--fault)">감시</b> 스트림을 수집해 <b style="color:var(--fault)">감시</b> 웨어하우스에 저장합니다. 우리 <b style="color:var(--fault)">감시</b> 과학자들은 고급 분석과 <b style="color:var(--fault)">감시</b> 처리를 통해 새로운 통찰을 도출합니다."';
+  function plain(){ el.innerHTML = PLAIN; stat.textContent="흔히 듣는 문구입니다 — 좋게 들리나요?"; stat.style.color=C.ink2; }
+  function swapped(){ el.innerHTML = SWAPPED; stat.textContent="같은 문장인데도 전혀 다르게 들립니다. 강한 표현이 필요한 이유입니다."; stat.style.color=C.fault; }
+  plain();
+  swapBtn.addEventListener("click", swapped);
+  resetBtn.addEventListener("click", plain);
+}
+
+/* ============================================================
+   WIDGET 6 — 프라이버시권의 이전 (14.2)
+   ============================================================ */
+function w_transfer(){
+  var svg = byId("tr-svg"); if(svg.dataset.built) return; svg.dataset.built="1";
+  var stat = byId("tr-stat"), stepBtn = byId("tr-step"), resetBtn = byId("tr-reset");
+  var step=0, layer;
+
+  function base(){
+    clear(svg); defsArrow(svg);
+    box(svg, 140, 70, 190, 50, "개인", C.healthy, "무엇을 누구에게 드러낼지 결정");
+    box(svg, 620, 70, 190, 50, "데이터 수집 기업", C.line, null);
+    E("rect",{x:300,y:132,width:170,height:34,rx:17,fill:C.panel,stroke:C.healthy,"stroke-width":2.2},svg).id="tr-right";
+    txt(svg, 385, 154, "프라이버시 결정권", {"text-anchor":"middle","font-size":11.5, fill:C.healthy, "font-weight":700}).id="tr-lbl";
+    layer = E("g",{},svg);
+  }
+  var STEPS = [
+    function(){ stat.textContent="단계 1 — 프라이버시는 비밀 유지가 아니라, 드러낼 것을 스스로 정하는 결정권입니다."; stat.style.color=C.healthy;
+      arw(layer, 300, 120, 220, 100, C.healthy, null);
+      txt(layer, 150, 118, "개인이 보유", {"text-anchor":"middle","font-size":11, fill:C.healthy, "font-weight":700}); },
+    function(){ stat.textContent="단계 2 — 감시 인프라를 통해 데이터가 추출됩니다."; stat.style.color=C.warn;
+      arw(layer, 240, 70, 520, 70, C.warn, "감시를 통한 데이터 추출"); },
+    function(){ stat.textContent="단계 3 — 권리가 침식되는 것이 아니라, 수집자에게 이전됩니다 — \"우리를 믿으세요\""; stat.style.color=C.fault;
+      var r=byId("tr-right"), l=byId("tr-lbl");
+      if(r){ r.setAttribute("x", 530); r.setAttribute("stroke", C.fault); }
+      if(l){ l.setAttribute("x", 615); l.setAttribute("fill", C.fault); }
+      arw(layer, 470, 148, 520, 148, C.fault, null);
+      txt(layer, 385, 194, "\"당신의 데이터로 옳은 일을 하리라 믿어 주세요\"", {"text-anchor":"middle","font-size":12, fill:C.fault, "font-weight":700}); },
+    function(){ stat.textContent="단계 4 — 이제 무엇이 드러날지는 개인의 선호가 아니라, 이익 극대화를 목표로 기업이 결정합니다."; stat.style.color=C.fault;
+      E("rect",{x:520,y:96,width:200,height:26,rx:8,fill:C.faultW,stroke:C.fault,"stroke-width":1.6},layer);
+      txt(layer, 620, 113, "이익 극대화 기준으로 행사", {"text-anchor":"middle","font-size":11, fill:C.fault, "font-weight":700});
+      txt(layer, 385, 220, "역사적으로 전례 없는 대규모 프라이버시권 이전", {"text-anchor":"middle","font-size":12.5, fill:C.fault, "font-weight":700});
+      stepBtn.disabled=true; }
+  ];
+  function reset(){ base(); step=0; stepBtn.disabled=false; stat.textContent="‘다음 단계’를 눌러 진행하세요."; stat.style.color=C.ink2; }
+  reset();
+  stepBtn.addEventListener("click", function(){ if(step>=STEPS.length) return; STEPS[step](); step++; });
+  resetBtn.addEventListener("click", reset);
+}
+
+/* ============================================================
+   WIDGET 7 — 산업혁명 ↔ 정보화 시대 (14.2)
+   ============================================================ */
+function w_ir(){
+  var svg = byId("ir-svg"); if(svg.dataset.built) return; svg.dataset.built="1";
+  var stat = byId("ir-stat"), bA = byId("ir-a"), bB = byId("ir-b");
+  var ERAS = {
+    ind: {
+      title:"산업혁명 (18–19세기)",
+      good:"지속적 경제 성장 · 장기적 생활수준 향상",
+      bad:["공기 오염 (연기·화학 공정)","수질 오염 (산업·인간 폐기물)","비좁고 비위생적인 노동자 주거","장시간 · 가혹한 노동 조건","광산의 위험한 아동 노동"],
+      fix:["환경 보호 규제","작업장 안전 규약","아동 노동 금지법","식품 위생 검사"],
+      note:"안전장치가 마련되기까지 오랜 시간이 걸렸고 사업 비용은 올랐지만, 사회 전체는 크게 이득을 보았다.",
+      color:C.warn
+    },
+    inf: {
+      title:"정보화 시대 (오늘)",
+      good:"인터넷 · 데이터 저장과 처리 · 소프트웨어 기반 자동화",
+      bad:["데이터 수집과 오용","항소 불가능한 자동 결정","차별과 착취","감시의 정상화","친밀한 정보의 노출과 유출"],
+      fix:["데이터 보호법 (GDPR 등)","데이터 최소화","자율 규제와 문화 전환","보관하지 않기 · 즉시 삭제"],
+      note:"\"데이터는 정보화 시대의 오염 문제이며, 프라이버시 보호는 그 환경적 도전이다.\" — 슈나이어",
+      color:C.fault
+    }
+  };
+  function draw(k){
+    var e = ERAS[k];
+    clear(svg);
+    txt(svg, 380, 20, e.title, {"text-anchor":"middle","font-size":13.5, fill:C.ink, "font-weight":700});
+    txt(svg, 380, 40, "이득 · " + e.good, {"text-anchor":"middle","font-size":11, fill:C.healthy, "font-weight":600});
+    txt(svg, 200, 68, "어두운 면", {"text-anchor":"middle","font-size":11.5, fill:e.color, "font-weight":700});
+    e.bad.forEach(function(b, i){
+      var y = 92 + i*24;
+      E("rect",{x:40,y:y-14,width:320,height:20,rx:6,fill:C.panel,stroke:e.color,"stroke-width":1.4},svg);
+      txt(svg, 200, y, b, {"text-anchor":"middle","font-size":10.5, fill:C.ink2, "font-weight":600});
+    });
+    txt(svg, 560, 68, "안전장치", {"text-anchor":"middle","font-size":11.5, fill:C.healthy, "font-weight":700});
+    e.fix.forEach(function(f, i){
+      var y = 92 + i*24;
+      E("rect",{x:400,y:y-14,width:320,height:20,rx:6,fill:C.healthyW,stroke:C.healthy,"stroke-width":1.4},svg);
+      txt(svg, 560, y, f, {"text-anchor":"middle","font-size":10.5, fill:C.ink2, "font-weight":600});
+    });
+    txt(svg, 380, 220, e.note, {"text-anchor":"middle","font-size":11, fill:C.muted, "font-weight":600});
+    stat.textContent = (k==="ind") ? "산업혁명의 어두운 면은 관리되어야 했다." : "정보화 시대의 전환에도 직면하고 해결해야 할 중대한 문제가 있다.";
+    stat.style.color = e.color;
+  }
+  draw("inf");
+  bA.addEventListener("click", function(){ draw("ind"); });
+  bB.addEventListener("click", function(){ draw("inf"); });
+}
+
+/* ---------- widget registry ---------- */
+var WIDGETS = {
+  "pa-prison": w_prison, "pa-proxy": w_proxy, "pa-loop": w_loop,
+  "pt-rel": w_rel, "pt-surv": w_surv, "pt-transfer": w_transfer, "pt-ir": w_ir
+};
+
+/* ============================================================
+   NAVIGATION ENGINE
+   ============================================================ */
+var deck = byId("deck");
+var slides = Array.prototype.slice.call(deck.querySelectorAll(".slide"));
+var total = slides.length, idx = 0;
+byId("total").textContent = total;
+var curEl = byId("cur"), progress = byId("progress"), hint = byId("hint");
+var hintHidden = false;
+
+function hideHint(){ if(!hintHidden){ hintHidden = true; hint.classList.add("hide"); } }
+setTimeout(hideHint, 5200);
+
+function show(n){
+  n = Math.max(0, Math.min(total-1, n));
+  halt(); // stop any background timers from the slide we are leaving
+  for(var i=0;i<total;i++){
+    slides[i].classList.toggle("active", i===n);
+    slides[i].classList.toggle("prev", i<n);
+  }
+  idx = n;
+  curEl.textContent = n+1;
+  progress.style.width = (total>1 ? (n/(total-1)*100) : 100) + "%";
+  var s = slides[n];
+  s.scrollTop = 0;
+  var id = s.getAttribute("data-id");
+  if(id && WIDGETS[id]){ try{ WIDGETS[id](); }catch(e){ console.error("widget", id, e); } }
+}
+function next(){ hideHint(); show(idx+1); }
+function prev(){ hideHint(); show(idx-1); }
+
+byId("next").addEventListener("click", next);
+byId("prev").addEventListener("click", prev);
+window.addEventListener("keydown", function(e){
+  if(e.key==="ArrowRight" || e.key===" " || e.key==="PageDown"){ e.preventDefault(); next(); }
+  else if(e.key==="ArrowLeft" || e.key==="PageUp"){ e.preventDefault(); prev(); }
+  else if(e.key==="Home"){ e.preventDefault(); hideHint(); show(0); }
+  else if(e.key==="End"){ e.preventDefault(); hideHint(); show(total-1); }
+});
+
+/* touch swipe (mobile) */
+var tsx=0, tsy=0;
+deck.addEventListener("touchstart", function(e){ var t=e.changedTouches[0]; tsx=t.clientX; tsy=t.clientY; }, {passive:true});
+deck.addEventListener("touchend", function(e){
+  var t=e.changedTouches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
+  if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5){ if(dx<0) next(); else prev(); }
+}, {passive:true});
+
+/* hashes for deep-link / restore */
+function fromHash(){ var h=parseInt(location.hash.replace("#",""),10); return (h>0 && h<=total)? h-1 : 0; }
+window.addEventListener("hashchange", function(){ show(fromHash()); });
+
+show(fromHash());
+})();
+</script>
+</body>
+</html>
